@@ -11,6 +11,19 @@ const available=o=>{
   return o.active!==false && !['OutOfStock','SoldOut','Discontinued','MissingFromCatalog'].includes(o.availability);
 };
 
+function productImage(p,detail=false){
+  const classes=`product-media ${detail?'detail-media':'card-media'}`;
+  if(!p.image_url) return `<div class="${classes} is-missing"><span>Sin imagen</span></div>`;
+  return `<div class="${classes}"><img src="${esc(p.image_url)}" alt="${esc(p.name)}" loading="lazy"><span>Sin imagen</span></div>`;
+}
+
+function bindImageFallback(root=document){
+  root.querySelectorAll('.product-media img').forEach(img=>img.addEventListener('error',()=>{
+    const media=img.closest('.product-media');
+    if(media){media.classList.add('is-missing');img.remove();}
+  },{once:true}));
+}
+
 async function load(){
   const [products,history,stats]=await Promise.all([
     fetch('data/products.json').then(r=>r.json()),
@@ -38,15 +51,22 @@ function render(){
     if(availability==='unavailable' && scopedOffers.some(available)) return false;
     return true;
   });
-  document.querySelector('#products').innerHTML=rows.map(card).join('') || '<p class="empty">No hay resultados.</p>';
-  document.querySelectorAll('[data-product]').forEach(el=>el.addEventListener('click',()=>openProduct(el.dataset.product)));
+  const products=document.querySelector('#products');
+  products.innerHTML=rows.map(card).join('') || '<p class="empty">No hay resultados.</p>';
+  products.querySelectorAll('[data-product]').forEach(el=>el.addEventListener('click',()=>openProduct(el.dataset.product)));
+  bindImageFallback(products);
 }
 
 function card(p){
   const best=p.offers.find(o=>o.price===p.best_price) || p.offers[0];
   return `<article class="card" data-product="${esc(p.id)}">
-    <div class="card-top"><div><span class="brand">${esc(p.brand||'Marca desconocida')}</span><h2>${esc(p.name)}</h2></div><div class="price"><small>Desde</small><strong>${money(p.best_price,best?.currency)}</strong></div></div>
-    <div class="tags">${p.stores.map(s=>`<span>${esc(s)}</span>`).join('')}<span>${p.offer_count} oferta${p.offer_count===1?'':'s'}</span></div>
+    <div class="card-main">
+      ${productImage(p)}
+      <div class="card-content">
+        <div class="card-top"><div><span class="brand">${esc(p.brand||'Marca desconocida')}</span><h2>${esc(p.name)}</h2></div><div class="price"><small>Desde</small><strong>${money(p.best_price,best?.currency)}</strong></div></div>
+        <div class="tags">${p.stores.map(s=>`<span>${esc(s)}</span>`).join('')}<span>${p.offer_count} oferta${p.offer_count===1?'':'s'}</span></div>
+      </div>
+    </div>
   </article>`;
 }
 
@@ -96,10 +116,12 @@ function openProduct(id){
   const stats=historyStats(points);
   const currency=p.offers.find(o=>o.price!=null)?.currency||'EUR';
   const summary=stats?`<section class="history-stats"><div><span>Mínimo histórico</span><strong>${money(stats.min,currency)}</strong></div><div><span>Máximo histórico</span><strong>${money(stats.max,currency)}</strong></div><div><span>Precio medio</span><strong>${money(stats.avg,currency)}</strong></div></section>`:'';
-  document.querySelector('#detail-content').innerHTML=`<p class="brand">${esc(p.brand||'')}</p><h2>${esc(p.name)}</h2><p class="best">Mejor precio actual: <strong>${money(p.best_price,currency)}</strong></p>
+  const detail=document.querySelector('#detail-content');
+  detail.innerHTML=`<section class="detail-header">${productImage(p,true)}<div><p class="brand">${esc(p.brand||'')}</p><h2>${esc(p.name)}</h2><p class="best">Mejor precio actual: <strong>${money(p.best_price,currency)}</strong></p></div></section>
     <div class="table-wrap"><table><thead><tr><th>Tienda</th><th>Precio</th><th>PVP</th><th>Descuento</th><th>Disponibilidad</th><th></th></tr></thead><tbody>${offers}</tbody></table></div>
     <h3>Evolución del precio</h3>${summary}${chartSvg(points,currency)}
     <details class="history-list"><summary>Ver histórico en lista (${points.length})</summary>${points.length?`<div class="history">${points.map(x=>`<div><span>${new Date(x.at).toLocaleDateString('es-ES')}</span><span>${esc(x.store)}</span><strong>${money(x.price,x.currency)}</strong></div>`).join('')}</div>`:'<p class="muted">Sin histórico público todavía.</p>'}</details>`;
+  bindImageFallback(detail);
   document.querySelector('#detail').showModal();
 }
 
