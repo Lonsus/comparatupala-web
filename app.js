@@ -29,9 +29,12 @@ function render(){
   const q=document.querySelector('#search').value.trim().toLowerCase();
   const store=document.querySelector('#store').value;
   const availability=document.querySelector('#availability').value;
+  const minOffers=Number(document.querySelector('#offer-count').value||0);
   const rows=state.products.filter(p=>{
     const scopedOffers=store?p.offers.filter(o=>o.store===store):p.offers;
     if(store && !scopedOffers.length) return false;
+    const offerCount=Number(p.offer_count??p.offers.length);
+    if(minOffers && offerCount<minOffers) return false;
     const text=[p.name,p.brand,...scopedOffers.flatMap(o=>[o.ean,o.reference,o.store,o.name])].join(' ').toLowerCase();
     if(q && !text.includes(q)) return false;
     if(availability==='available' && !scopedOffers.some(available)) return false;
@@ -103,6 +106,6 @@ function openProduct(id){
   document.querySelector('#detail').showModal();
 }
 
-document.querySelectorAll('#search,#store,#availability').forEach(el=>el.addEventListener('input',render));
+document.querySelectorAll('#search,#store,#availability,#offer-count').forEach(el=>el.addEventListener('input',render));
 document.querySelector('#close').addEventListener('click',()=>document.querySelector('#detail').close());
 load().catch(err=>{document.querySelector('#products').innerHTML=`<p class="empty">No se pudieron cargar los datos: ${esc(err.message)}</p>`;});
