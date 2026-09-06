@@ -10,6 +10,19 @@ const available=o=>{
   if(o.store==='padelnuestro' && (isError(o) || isUnknownAvailability(o))) return false;
   return o.active!==false && !['OutOfStock','SoldOut','Discontinued','MissingFromCatalog'].includes(o.availability);
 };
+const parseOfferCountFilter=value=>{
+  const match=String(value||'').trim().match(/^(>=|<=|>|<|=)?\s*(\d+)$/);
+  if(!match) return null;
+  return {operator:match[1]||'=',value:Number(match[2])};
+};
+const matchesOfferCount=(count,filter)=>{
+  if(!filter) return true;
+  if(filter.operator==='>') return count>filter.value;
+  if(filter.operator==='<') return count<filter.value;
+  if(filter.operator==='>=') return count>=filter.value;
+  if(filter.operator==='<=') return count<=filter.value;
+  return count===filter.value;
+};
 
 async function load(){
   const [products,history,stats]=await Promise.all([
@@ -29,12 +42,12 @@ function render(){
   const q=document.querySelector('#search').value.trim().toLowerCase();
   const store=document.querySelector('#store').value;
   const availability=document.querySelector('#availability').value;
-  const minOffers=Number(document.querySelector('#offer-count').value||0);
+  const offerCountFilter=parseOfferCountFilter(document.querySelector('#offer-count').value);
   const rows=state.products.filter(p=>{
     const scopedOffers=store?p.offers.filter(o=>o.store===store):p.offers;
     if(store && !scopedOffers.length) return false;
     const offerCount=Number(p.offer_count??p.offers.length);
-    if(minOffers && offerCount<minOffers) return false;
+    if(!matchesOfferCount(offerCount,offerCountFilter)) return false;
     const text=[p.name,p.brand,...scopedOffers.flatMap(o=>[o.ean,o.reference,o.store,o.name])].join(' ').toLowerCase();
     if(q && !text.includes(q)) return false;
     if(availability==='available' && !scopedOffers.some(available)) return false;
