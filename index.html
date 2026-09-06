@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Compara precios de palas de pádel entre varias tiendas y consulta su evolución histórica.">
+  <title>ComparaTuPala.es — Comparador de palas de pádel</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="container">
+    <header>
+      <p class="eyebrow">COMPARATUPALA.ES</p>
+      <h1>Compara tu pala</h1>
+      <p class="muted">Compara precios, disponibilidad y evolución histórica entre tiendas de pádel.</p>
+      <p id="updated" class="muted"></p>
+    </header>
+
+    <section class="controls">
+      <input id="search" type="search" placeholder="Buscar pala, marca, EAN o referencia">
+      <select id="store"><option value="">Todas las tiendas</option></select>
+      <select id="availability">
+        <option value="">Toda disponibilidad</option>
+        <option value="available">Disponibles</option>
+        <option value="unavailable">No disponibles</option>
+      </select>
+    </section>
+
+    <section id="stats" class="stats"></section>
+    <section id="products" class="products"></section>
+  </main>
+
+  <dialog id="detail">
+    <button id="close" class="close" aria-label="Cerrar">×</button>
+    <div id="detail-content"></div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
