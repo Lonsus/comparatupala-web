@@ -1,7 +1,15 @@
 const state={products:[],history:{},stats:{}};
 const money=(v,c='EUR')=>v==null?'—':new Intl.NumberFormat('es-ES',{style:'currency',currency:c||'EUR'}).format(v);
 const esc=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
-const available=o=>o.active!==false && !['OutOfStock','SoldOut','Discontinued','MissingFromCatalog'].includes(o.availability);
+const isError=o=>String(o.status||'').trim().toLowerCase()==='error';
+const isUnknownAvailability=o=>{
+  const value=String(o.availability||'').trim().toLowerCase();
+  return !value || ['desconocida','desconocido','unknown'].includes(value);
+};
+const available=o=>{
+  if(o.store==='padelnuestro' && (isError(o) || isUnknownAvailability(o))) return false;
+  return o.active!==false && !['OutOfStock','SoldOut','Discontinued','MissingFromCatalog'].includes(o.availability);
+};
 
 async function load(){
   const [products,history,stats]=await Promise.all([
@@ -22,11 +30,12 @@ function render(){
   const store=document.querySelector('#store').value;
   const availability=document.querySelector('#availability').value;
   const rows=state.products.filter(p=>{
-    const text=[p.name,p.brand,...p.offers.flatMap(o=>[o.ean,o.reference,o.store,o.name])].join(' ').toLowerCase();
+    const scopedOffers=store?p.offers.filter(o=>o.store===store):p.offers;
+    if(store && !scopedOffers.length) return false;
+    const text=[p.name,p.brand,...scopedOffers.flatMap(o=>[o.ean,o.reference,o.store,o.name])].join(' ').toLowerCase();
     if(q && !text.includes(q)) return false;
-    if(store && !p.offers.some(o=>o.store===store)) return false;
-    if(availability==='available' && !p.offers.some(available)) return false;
-    if(availability==='unavailable' && p.offers.some(available)) return false;
+    if(availability==='available' && !scopedOffers.some(available)) return false;
+    if(availability==='unavailable' && scopedOffers.some(available)) return false;
     return true;
   });
   document.querySelector('#products').innerHTML=rows.map(card).join('') || '<p class="empty">No hay resultados.</p>';
