@@ -1,0 +1,108 @@
+const state={products:[],history:{},stats:{}};
+const money=(v,c='EUR')=>v==null?'—':new Intl.NumberFormat('es-ES',{style:'currency',currency:c||'EUR'}).format(v);
+const esc=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
+const isError=o=>String(o.status||'').trim().toLowerCase()==='error';
+const isUnknownAvailability=o=>{
+  const value=String(o.availability||'').trim().toLowerCase();
+  return !value || ['desconocida','desconocido','unknown'].includes(value);
+};
+const available=o=>{
+  if(o.store==='padelnuestro' && (isError(o) || isUnknownAvailability(o))) return false;
+  return o.active!==false && !['OutOfStock','SoldOut','Discontinued','MissingFromCatalog'].includes(o.availability);
+};
+
+async function load(){
+  const [products,history,stats]=await Promise.all([
+    fetch('data/products.json').then(r=>r.json()),
+    fetch('data/history.json').then(r=>r.json()),
+    fetch('data/stats.json').then(r=>r.json())
+  ]);
+  Object.assign(state,{products,history,stats});
+  const store=document.querySelector('#store');
+  stats.stores.forEach(s=>store.insertAdjacentHTML('beforeend',`<option value="${esc(s)}">${esc(s)}</option>`));
+  document.querySelector('#updated').textContent=`Datos exportados: ${new Date(stats.generated_at).toLocaleString('es-ES')}`;
+  document.querySelector('#stats').innerHTML=`<div><strong>${stats.products}</strong><span>productos</span></div><div><strong>${stats.offers}</strong><span>ofertas</span></div><div><strong>${stats.stores.length}</strong><span>tiendas</span></div>`;
+  render();
+}
+
+function render(){
+  const q=document.querySelector('#search').value.trim().toLowerCase();
+  const store=document.querySelector('#store').value;
+  const availability=document.querySelector('#availability').value;
+  const rows=state.products.filter(p=>{
+    const scopedOffers=store?p.offers.filter(o=>o.store===store):p.offers;
+    if(store && !scopedOffers.length) return false;
+    const text=[p.name,p.brand,...scopedOffers.flatMap(o=>[o.ean,o.reference,o.store,o.name])].join(' ').toLowerCase();
+    if(q && !text.includes(q)) return false;
+    if(availability==='available' && !scopedOffers.some(available)) return false;
+    if(availability==='unavailable' && scopedOffers.some(available)) return false;
+    return true;
+  });
+  document.querySelector('#products').innerHTML=rows.map(card).join('') || '<p class="empty">No hay resultados.</p>';
+  document.querySelectorAll('[data-product]').forEach(el=>el.addEventListener('click',()=>openProduct(el.dataset.product)));
+}
+
+function card(p){
+  const best=p.offers.find(o=>o.price===p.best_price) || p.offers[0];
+  return `<article class="card" data-product="${esc(p.id)}">
+    <div class="card-top"><div><span class="brand">${esc(p.brand||'Marca desconocida')}</span><h2>${esc(p.name)}</h2></div><div class="price"><small>Desde</small><strong>${money(p.best_price,best?.currency)}</strong></div></div>
+    <div class="tags">${p.stores.map(s=>`<span>${esc(s)}</span>`).join('')}<span>${p.offer_count} oferta${p.offer_count===1?'':'s'}</span></div>
+  </article>`;
+}
+
+function historyPoints(product){
+  return product.offers.flatMap(o=>(state.history[String(o.id)]||[])
+    .filter(x=>x.price!=null)
+    .map(x=>({...x,store:o.store,currency:o.currency,url:o.url,offerId:o.id})))
+    .sort((a,b)=>String(a.at).localeCompare(String(b.at)));
+}
+
+function historyStats(points){
+  const prices=points.map(p=>Number(p.price)).filter(Number.isFinite);
+  if(!prices.length) return null;
+  const min=Math.min(...prices),max=Math.max(...prices),avg=prices.reduce((a,b)=>a+b,0)/prices.length;
+  return {min,max,avg};
+}
+
+function chartSvg(points,currency='EUR'){
+  if(!points.length) return '<p class="muted">Sin histórico público todavía.</p>';
+  const width=900,height=360,left=72,right=24,top=30,bottom=52;
+  const times=points.map(p=>new Date(p.at).getTime()).filter(Number.isFinite);
+  const prices=points.map(p=>Number(p.price)).filter(Number.isFinite);
+  if(!times.length||!prices.length) return '<p class="muted">Sin histórico público todavía.</p>';
+  let minT=Math.min(...times),maxT=Math.max(...times); if(minT===maxT) maxT=minT+86400000;
+  let minP=Math.min(...prices),maxP=Math.max(...prices); const pad=Math.max((maxP-minP)*.12,1); minP=Math.max(0,minP-pad); maxP+=pad; if(minP===maxP) maxP=minP+1;
+  const x=t=>left+(t-minT)/(maxT-minT)*(width-left-right);
+  const y=p=>top+(maxP-p)/(maxP-minP)*(height-top-bottom);
+  const stores=[...new Set(points.map(p=>p.store))];
+  const palette=['#2563eb','#dc2626','#059669','#7c3aed','#ea580c','#0891b2'];
+  const series=stores.map((store,i)=>({store,color:palette[i%palette.length],points:points.filter(p=>p.store===store)}));
+  const grid=Array.from({length:5},(_,i)=>{const value=maxP-(maxP-minP)*i/4;const yy=top+(height-top-bottom)*i/4;return `<line x1="${left}" y1="${yy}" x2="${width-right}" y2="${yy}" class="chart-grid"/><text x="${left-10}" y="${yy+4}" text-anchor="end" class="chart-axis">${esc(money(value,currency))}</text>`}).join('');
+  const lines=series.map(s=>{
+    const coords=s.points.map(p=>`${x(new Date(p.at).getTime()).toFixed(1)},${y(Number(p.price)).toFixed(1)}`).join(' ');
+    const dots=s.points.map(p=>`<circle cx="${x(new Date(p.at).getTime())}" cy="${y(Number(p.price))}" r="4" fill="${s.color}"><title>${esc(s.store)} · ${new Date(p.at).toLocaleDateString('es-ES')} · ${esc(money(p.price,p.currency||currency))}</title></circle>`).join('');
+    return `<polyline points="${coords}" fill="none" stroke="${s.color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>${dots}`;
+  }).join('');
+  const startLabel=new Date(minT).toLocaleDateString('es-ES');
+  const endLabel=new Date(maxT).toLocaleDateString('es-ES');
+  const legend=series.map(s=>`<span><i style="background:${s.color}"></i>${esc(s.store)}</span>`).join('');
+  return `<div class="chart-wrap"><svg class="price-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Evolución histórica del precio por tienda">${grid}<line x1="${left}" y1="${height-bottom}" x2="${width-right}" y2="${height-bottom}" class="chart-axis-line"/><text x="${left}" y="${height-16}" class="chart-axis">${esc(startLabel)}</text><text x="${width-right}" y="${height-16}" text-anchor="end" class="chart-axis">${esc(endLabel)}</text>${lines}</svg><div class="chart-legend">${legend}</div></div>`;
+}
+
+function openProduct(id){
+  const p=state.products.find(x=>x.id===id); if(!p) return;
+  const offers=p.offers.map(o=>`<tr><td>${esc(o.store)}</td><td>${money(o.price,o.currency)}</td><td>${o.original_price==null?'—':money(o.original_price,o.currency)}</td><td>${o.discount_percent==null?'—':esc(o.discount_percent)+' %'}</td><td>${esc(o.availability||'Desconocida')}</td><td><a href="${esc(o.url)}" target="_blank" rel="noopener noreferrer">Ver tienda</a></td></tr>`).join('');
+  const points=historyPoints(p);
+  const stats=historyStats(points);
+  const currency=p.offers.find(o=>o.price!=null)?.currency||'EUR';
+  const summary=stats?`<section class="history-stats"><div><span>Mínimo histórico</span><strong>${money(stats.min,currency)}</strong></div><div><span>Máximo histórico</span><strong>${money(stats.max,currency)}</strong></div><div><span>Precio medio</span><strong>${money(stats.avg,currency)}</strong></div></section>`:'';
+  document.querySelector('#detail-content').innerHTML=`<p class="brand">${esc(p.brand||'')}</p><h2>${esc(p.name)}</h2><p class="best">Mejor precio actual: <strong>${money(p.best_price,currency)}</strong></p>
+    <div class="table-wrap"><table><thead><tr><th>Tienda</th><th>Precio</th><th>PVP</th><th>Descuento</th><th>Disponibilidad</th><th></th></tr></thead><tbody>${offers}</tbody></table></div>
+    <h3>Evolución del precio</h3>${summary}${chartSvg(points,currency)}
+    <details class="history-list"><summary>Ver histórico en lista (${points.length})</summary>${points.length?`<div class="history">${points.map(x=>`<div><span>${new Date(x.at).toLocaleDateString('es-ES')}</span><span>${esc(x.store)}</span><strong>${money(x.price,x.currency)}</strong></div>`).join('')}</div>`:'<p class="muted">Sin histórico público todavía.</p>'}</details>`;
+  document.querySelector('#detail').showModal();
+}
+
+document.querySelectorAll('#search,#store,#availability').forEach(el=>el.addEventListener('input',render));
+document.querySelector('#close').addEventListener('click',()=>document.querySelector('#detail').close());
+load().catch(err=>{document.querySelector('#products').innerHTML=`<p class="empty">No se pudieron cargar los datos: ${esc(err.message)}</p>`;});
