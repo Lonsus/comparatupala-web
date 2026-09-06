@@ -11,9 +11,11 @@ const available=o=>{
   return o.active!==false && !['OutOfStock','SoldOut','Discontinued','MissingFromCatalog'].includes(o.availability);
 };
 const parseOfferCountFilter=value=>{
-  const match=String(value||'').trim().match(/^(>=|<=|>|<|=)?\s*(\d+)$/);
-  if(!match) return null;
-  return {operator:match[1]||'=',value:Number(match[2])};
+  const raw=String(value||'').trim();
+  if(!raw) return {valid:true,filter:null};
+  const match=raw.match(/^(>=|<=|>|<|=)?\s*(\d+)$/);
+  if(!match) return {valid:false,filter:null};
+  return {valid:true,filter:{operator:match[1]||'=',value:Number(match[2])}};
 };
 const matchesOfferCount=(count,filter)=>{
   if(!filter) return true;
@@ -42,11 +44,18 @@ function render(){
   const q=document.querySelector('#search').value.trim().toLowerCase();
   const store=document.querySelector('#store').value;
   const availability=document.querySelector('#availability').value;
-  const offerCountFilter=parseOfferCountFilter(document.querySelector('#offer-count').value);
+  const offerCountInput=document.querySelector('#offer-count');
+  const parsedOfferCountFilter=parseOfferCountFilter(offerCountInput.value);
+  offerCountInput.setAttribute('aria-invalid',String(!parsedOfferCountFilter.valid));
+  if(!parsedOfferCountFilter.valid){
+    document.querySelector('#products').innerHTML='<p class="empty">Filtro de ofertas no válido. Usa, por ejemplo: &gt;1, &lt;2, &gt;=1, &lt;=3, =2 o 2.</p>';
+    return;
+  }
+  const offerCountFilter=parsedOfferCountFilter.filter;
   const rows=state.products.filter(p=>{
     const scopedOffers=store?p.offers.filter(o=>o.store===store):p.offers;
     if(store && !scopedOffers.length) return false;
-    const offerCount=Number(p.offer_count??p.offers.length);
+    const offerCount=p.offers.length;
     if(!matchesOfferCount(offerCount,offerCountFilter)) return false;
     const text=[p.name,p.brand,...scopedOffers.flatMap(o=>[o.ean,o.reference,o.store,o.name])].join(' ').toLowerCase();
     if(q && !text.includes(q)) return false;
@@ -60,9 +69,10 @@ function render(){
 
 function card(p){
   const best=p.offers.find(o=>o.price===p.best_price) || p.offers[0];
+  const offerCount=p.offers.length;
   return `<article class="card" data-product="${esc(p.id)}">
     <div class="card-top"><div><span class="brand">${esc(p.brand||'Marca desconocida')}</span><h2>${esc(p.name)}</h2></div><div class="price"><small>Desde</small><strong>${money(p.best_price,best?.currency)}</strong></div></div>
-    <div class="tags">${p.stores.map(s=>`<span>${esc(s)}</span>`).join('')}<span>${p.offer_count} oferta${p.offer_count===1?'':'s'}</span></div>
+    <div class="tags">${p.stores.map(s=>`<span>${esc(s)}</span>`).join('')}<span>${offerCount} oferta${offerCount===1?'':'s'}</span></div>
   </article>`;
 }
 
