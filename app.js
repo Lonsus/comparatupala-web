@@ -3,6 +3,7 @@ const state = {products:[], history:{}, stats:{}, saved:new Set(), page:1, pageS
 const stores = {padelnuestro:{name:'Padel Nuestro',color:'#119759'}, zonadepadel:{name:'Zona de Pádel',color:'#5a6cdd'}, padelmarket:{name:'Padel Market',color:'#d18323'}};
 const storeName = s => stores[s]?.name || s;
 const storeColor = s => stores[s]?.color || '#758779';
+const storeHref = s => stores[s]?.href || '';
 const dot = s => `<i class="store-dot" style="background:${storeColor(s)}" aria-hidden="true"></i>`;
 const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const norm = s => String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
@@ -12,6 +13,30 @@ const timestamp = v => v ? new Date(v).getTime() : NaN;
 const date = (v,full=false) => Number.isFinite(timestamp(v)) ? new Intl.DateTimeFormat('es-ES',{dateStyle:'medium',...(full?{timeStyle:'short'}:{}),timeZone:'Europe/Madrid'}).format(new Date(v)) : 'Sin fecha';
 const safeUrl = value => {try {const u=new URL(value);return ['https:','http:'].includes(u.protocol)?u.href:'';}catch{return '';}};
 const externalLink = (url,label,classes='') => safeUrl(url)?`<a class="${classes}" href="${esc(safeUrl(url))}" target="_blank" rel="noopener noreferrer">${label}</a>`:'<span class="muted">Enlace no disponible</span>';
+const storeLabel = s => {const href=storeHref(s),label=esc(storeName(s));return href?`<a class="offer-store-link" href="${esc(href)}">${label}</a>`:`<span class="offer-store-name">${label}</span>`;};
+const hasRatingValue = v => v!==null && v!==undefined && v!=='';
+const ratingNumber = v => new Intl.NumberFormat('es-ES',{maximumFractionDigits:1}).format(Number(v));
+function externalRatingData(o){
+  const rawPresent=hasRatingValue(o.external_rating),scalePresent=hasRatingValue(o.external_rating_scale),normalizedPresent=hasRatingValue(o.external_rating_normalized);
+  const raw=rawPresent?Number(o.external_rating):null,scale=scalePresent?Number(o.external_rating_scale):null,normalized=normalizedPresent?Number(o.external_rating_normalized):null;
+  if(rawPresent&&(!Number.isFinite(raw)||raw<=0))return null;
+  if(scalePresent&&(!Number.isFinite(scale)||scale<=0))return null;
+  if(rawPresent&&scalePresent&&raw>scale)return null;
+  if(normalizedPresent&&(!Number.isFinite(normalized)||normalized<=0||normalized>5))return null;
+  const score=normalizedPresent?normalized:(rawPresent&&scalePresent?raw/scale*5:null);
+  if(!Number.isFinite(score)||score<=0||score>5)return null;
+  const reviewPresent=hasRatingValue(o.external_review_count),review=reviewPresent?Number(o.external_review_count):null;
+  const reviewCount=reviewPresent&&Number.isInteger(review)&&review>=0?review:null;
+  return {score,reviewCount,raw:rawPresent&&scalePresent?raw:null,scale:rawPresent&&scalePresent?scale:null};
+}
+function renderExternalRating(o){
+  const data=externalRatingData(o);
+  if(!data)return '<div class="offer-rating offer-rating-empty" role="group" aria-label="Sin valoración externa publicada">Sin valoración publicada</div>';
+  const score=ratingNumber(data.score),reviewText=data.reviewCount===null?'':`${data.reviewCount.toLocaleString('es-ES')} reseña${data.reviewCount===1?'':'s'}`;
+  const aria=`Valoración ${score} sobre 5${reviewText?' basada en '+reviewText:''}`;
+  const originalTitle=data.raw!==null&&data.scale!==5?` title="${esc('Valoración original: '+ratingNumber(data.raw)+' / '+ratingNumber(data.scale))}"`:'';
+  return `<div class="offer-rating" role="group" aria-label="${esc(aria)}"><span class="offer-rating-line"><span class="offer-rating-score"${originalTitle}><span class="offer-rating-star" aria-hidden="true">★</span> ${score} / 5</span>${reviewText?`<span class="offer-rating-count"> · ${esc(reviewText)}</span>`:''}</span><span class="offer-rating-label">Valoración externa</span></div>`;
+}
 const isError = o => norm(o.status)==='error';
 const availabilityCode = o => norm(o.availability).split('/').pop();
 const available = o => o.active!==false && !isError(o) && ['instock','limitedavailability','onlineonly','available','disponible','en stock'].includes(availabilityCode(o));
@@ -94,7 +119,7 @@ function chartSvg(model,currency='EUR'){
   const lines=series.map(s=>`<path data-series="${esc(s.offer.id)}" d="${stepPath(s.points,x,y)}" fill="none" stroke="${storeColor(s.offer.store)}" stroke-width="2.7" stroke-linejoin="round"/>${s.points.map(p=>`<circle cx="${x(p.time)}" cy="${y(p.price)}" r="${p.kind==='carry'?0:3.5}" fill="${storeColor(s.offer.store)}"><title>${esc(storeName(s.offer.store))} · ${esc(date(p.at,true))} · ${esc(money(p.price,currency))}${p.kind==='checked'?' · última lectura correcta':''}</title></circle>`).join('')}`).join('');
   return `<p class="scroll-hint">Desliza el gráfico para recorrer las fechas. Los valores exactos están en los registros.</p><div class="chart-wrap" tabindex="0" role="region" aria-label="Gráfico del histórico de precios"><svg class="price-chart" viewBox="0 0 ${w} ${h}" role="img" aria-label="Histórico de precios por tienda: tramos horizontales y cambios verticales. Consulta los valores exactos en la tabla de registros.">${grid}${dates}${lines}</svg></div><div class="chart-legend">${series.map(s=>`<span>${dot(s.offer.store)}${esc(storeName(s.offer.store))}</span>`).join('')}</div>`;
 }
-function renderOffers(p){const best=bestOffer(p.offers);return p.offers.map(o=>`<article class="offer-row ${best?.id===o.id?'best-offer':''}"><div><div class="offer-store">${dot(o.store)}${esc(storeName(o.store))}</div><p class="offer-info">${best?.id===o.id?'Mejor precio disponible · ':''}${esc(availabilityLabel(o))}</p></div><div class="offer-price">${money(o.price,o.currency)}${validPrice(o.original_price)&&validPrice(o.price)&&Number(o.original_price)>Number(o.price)?`<span class="offer-original">PVP <s>${money(o.original_price,o.currency)}</s> · −${discount(o)}%</span>`:''}</div><div class="offer-ean">EAN: ${esc(o.ean||'No publicado')}<br>Última lectura correcta: ${esc(date(o.last_successful_check||(!isError(o)?o.last_checked:null),true))}</div><span class="badge ${available(o)?'positive':'warning'}">${available(o)?'En stock':'Sin stock confirmado'}</span><div class="offer-actions"><button class="text-button" data-spec-offer="${esc(o.id)}">Ver características</button>${externalLink(o.url,'Ir a la tienda ↗')}</div></article>`).join('');}
+function renderOffers(p){const best=bestOffer(p.offers);return p.offers.map(o=>`<article class="offer-row ${best?.id===o.id?'best-offer':''}"><div class="offer-store-block"><div class="offer-store">${dot(o.store)}${storeLabel(o.store)}</div>${renderExternalRating(o)}<p class="offer-info">${best?.id===o.id?'Mejor precio disponible · ':''}${esc(availabilityLabel(o))}</p></div><div class="offer-price">${money(o.price,o.currency)}${validPrice(o.original_price)&&validPrice(o.price)&&Number(o.original_price)>Number(o.price)?`<span class="offer-original">PVP <s>${money(o.original_price,o.currency)}</s> · −${discount(o)}%</span>`:''}</div><div class="offer-ean">EAN: ${esc(o.ean||'No publicado')}<br>Última lectura correcta: ${esc(date(o.last_successful_check||(!isError(o)?o.last_checked:null),true))}</div><span class="badge ${available(o)?'positive':'warning'}">${available(o)?'En stock':'Sin stock confirmado'}</span><div class="offer-actions"><button class="text-button" data-spec-offer="${esc(o.id)}">Ver características</button>${externalLink(o.url,'Ir a la tienda ↗')}</div></article>`).join('');}
 function renderComparison(p){
   if(p.offers.length<2)return '';
   const rows=comparisonRows(p.offers);if(!rows.length)return '';
