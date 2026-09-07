@@ -6,6 +6,14 @@
   // Activar solo cuando exista un proveedor/endpoint de newsletter configurado y revisado.
   const NEWSLETTER_ENDPOINT = '';
 
+  const catalogSummary = document.getElementById('catalog-summary');
+  if (catalogSummary) {
+    catalogSummary.open = true;
+    catalogSummary.addEventListener('toggle', () => {
+      if (!catalogSummary.open) catalogSummary.open = true;
+    });
+  }
+
   const setupAboutCollapsibles = () => {
     const aboutSection = document.getElementById('quienes-somos');
     const aboutHeading = aboutSection?.querySelector('.about-heading');
@@ -49,39 +57,91 @@
       });
     }
 
-    const legalCard = aboutSection?.querySelector('.about-card-wide');
-    if (legalCard && !legalCard.querySelector('.about-legal-toggle')) {
-      const legalTitle = legalCard.querySelector('h3');
-      const legalParagraphs = [...legalCard.children].filter(
-        (child) => child.tagName === 'P' && !child.classList.contains('about-card-label')
+    aboutSection?.querySelectorAll('.about-card').forEach((card, index) => {
+      if (card.querySelector(':scope > .about-legal-toggle')) return;
+
+      const title = card.querySelector(':scope > h3');
+      const label = card.querySelector(':scope > .about-card-label');
+      const contentNodes = [...card.children].filter(
+        (child) => child !== title && child !== label && !child.classList.contains('about-legal-toggle')
       );
 
-      if (legalTitle && legalParagraphs.length) {
-        const legalContent = document.createElement('div');
-        legalContent.className = 'about-legal-content';
-        legalContent.id = 'about-legal-content';
-        legalParagraphs.forEach((paragraph) => legalContent.appendChild(paragraph));
-        legalCard.appendChild(legalContent);
+      if (!title || !contentNodes.length) return;
 
-        const legalToggle = document.createElement('button');
-        legalToggle.type = 'button';
-        legalToggle.className = 'about-legal-toggle';
-        legalToggle.setAttribute('aria-expanded', 'true');
-        legalToggle.setAttribute('aria-controls', legalContent.id);
-        legalToggle.setAttribute('aria-label', 'Contraer marco normativo');
-        legalCard.appendChild(legalToggle);
+      const cardContent = document.createElement('div');
+      cardContent.className = 'about-legal-content';
+      cardContent.id = `about-card-content-${index + 1}`;
+      contentNodes.forEach((node) => cardContent.appendChild(node));
+      card.appendChild(cardContent);
 
-        const setLegalExpanded = (expanded) => {
-          legalContent.hidden = !expanded;
-          legalCard.classList.toggle('is-collapsed', !expanded);
-          legalToggle.setAttribute('aria-expanded', String(expanded));
-          legalToggle.setAttribute(
+      const cardToggle = document.createElement('button');
+      cardToggle.type = 'button';
+      cardToggle.className = 'about-legal-toggle';
+      cardToggle.setAttribute('aria-expanded', 'true');
+      cardToggle.setAttribute('aria-controls', cardContent.id);
+      card.appendChild(cardToggle);
+
+      const sectionName = (label?.textContent || title.textContent || 'sección').trim();
+      const setCardExpanded = (expanded) => {
+        cardContent.hidden = !expanded;
+        card.classList.toggle('is-collapsed', !expanded);
+        cardToggle.setAttribute('aria-expanded', String(expanded));
+        cardToggle.setAttribute(
+          'aria-label',
+          expanded ? `Contraer ${sectionName}` : `Expandir ${sectionName}`
+        );
+      };
+
+      setCardExpanded(false);
+      cardToggle.addEventListener('click', () => {
+        setCardExpanded(cardToggle.getAttribute('aria-expanded') !== 'true');
+      });
+    });
+
+    const contactSection = document.getElementById('contacto');
+    if (contactSection && !contactSection.querySelector(':scope > .about-legal-toggle')) {
+      const contactCopy = contactSection.querySelector('.contact-copy');
+      const contactTitle = contactCopy?.querySelector('h3');
+      const contactEyebrow = contactCopy?.querySelector('.eyebrow');
+      const contactActions = contactSection.querySelector('.contact-actions');
+      const contactNodes = contactCopy
+        ? [...contactCopy.children].filter((child) => child !== contactTitle && child !== contactEyebrow)
+        : [];
+
+      if (contactCopy && contactTitle && contactActions && contactNodes.length) {
+        const contactContent = document.createElement('div');
+        contactContent.className = 'contact-collapsible-content contact-copy';
+        contactContent.id = 'contact-collapsible-content';
+        contactNodes.forEach((node) => contactContent.appendChild(node));
+        contactCopy.appendChild(contactContent);
+
+        contactActions.id = contactActions.id || 'contact-collapsible-actions';
+
+        const contactToggle = document.createElement('button');
+        contactToggle.type = 'button';
+        contactToggle.className = 'about-legal-toggle';
+        contactToggle.setAttribute('aria-expanded', 'true');
+        contactToggle.setAttribute('aria-controls', `${contactContent.id} ${contactActions.id}`);
+        contactSection.appendChild(contactToggle);
+
+        const setContactExpanded = (expanded) => {
+          contactContent.hidden = !expanded;
+          contactActions.hidden = !expanded;
+          contactSection.classList.toggle('is-collapsed', !expanded);
+          contactToggle.setAttribute('aria-expanded', String(expanded));
+          contactToggle.setAttribute(
             'aria-label',
-            expanded ? 'Contraer marco normativo' : 'Expandir marco normativo'
+            expanded ? 'Contraer contacto y correcciones' : 'Expandir contacto y correcciones'
           );
         };
-        setLegalExpanded(false);
-        legalToggle.addEventListener('click', () => setLegalExpanded(legalToggle.getAttribute('aria-expanded') !== 'true'));
+
+        setContactExpanded(false);
+        contactToggle.addEventListener('click', () => {
+          setContactExpanded(contactToggle.getAttribute('aria-expanded') !== 'true');
+        });
+        document.querySelectorAll('a[href="#contacto"]').forEach((link) => {
+          link.addEventListener('click', () => setContactExpanded(true));
+        });
       }
     }
   };
