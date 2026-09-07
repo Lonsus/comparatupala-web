@@ -64,8 +64,3 @@ Las ofertas con stock desconocido o última lectura fallida no se recomiendan co
 Los precios no incluyen gastos de envío y se confirman en la tienda.
 
 Para una vista previa local, sirve esta carpeta con `python -m http.server 8765`.
-Para comprobar filtros, disponibilidad e histórico sin dependencias adicionales:
-
-```sh
-node --test tests/dashboard.test.cjs
-```

@@ -195,5 +195,4 @@ function init(){
   window.addEventListener('hashchange',()=>{if(state.products.length)route();});
   load().catch(err=>{document.getElementById('products').innerHTML=`<div class="empty"><h3>No pudimos cargar el catálogo</h3><p>${esc(err.message)}</p><button class="secondary-button" onclick="location.reload()">Reintentar</button></div>`;document.getElementById('products').setAttribute('aria-busy','false');document.getElementById('updated').textContent='Datos no disponibles';});
 }
-if(typeof document!=='undefined')init();
-if(typeof module!=='undefined'&&module.exports)module.exports={validPrice,available,bestOffer,discount,feature,comparisonRows,parseOfferCountFilter,matchesOfferCount,productMatch,offerHistory,chartSeries,stepPath,chartSvg,safeUrl};
+init();
