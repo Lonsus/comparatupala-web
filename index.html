@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Compara precios, características por tienda e histórico de palas de pádel."><meta name="theme-color" content="#111c18">
 <title>ComparaTuPala.es — Explora, compara y elige</title>
-<link rel="stylesheet" href="styles.css?v=dashboard-2">
+<link rel="stylesheet" href="styles.css?v=home-catalog-1">
 </head>
 <body>
 <a class="skip-link" href="#main">Saltar al contenido</a>
@@ -17,10 +17,13 @@
 <div id="catalog-view">
 <section class="intro"><div><p class="eyebrow">EXPLORA · COMPARA · ELIGE</p><h1>Tu próxima pala,<br><span>con toda la información.</span></h1><p class="muted">Precios, materiales y sensaciones de juego. Compara antes de entrar en pista.</p></div><div class="freshness"><span class="status-label"><i class="status-dot"></i> Última consulta de tiendas</span><p id="updated">Cargando catálogo…</p><small>Precios registrados · sin gastos de envío</small></div></section>
 <section id="stats" class="stats" aria-label="Resumen del catálogo"></section>
+<section class="home-search" aria-labelledby="home-search-title">
+<div><p class="eyebrow">BÚSQUEDA RÁPIDA</p><h2 id="home-search-title">Buscar tu pala</h2><p class="muted">Encuentra una pala directamente por nombre, marca o EAN.</p></div>
+<label class="home-search-field field"><span>Buscar pala</span><input id="search" type="search" placeholder="Nombre, marca, EAN…" autocomplete="off"></label>
+</section>
 <div class="workspace">
-<aside class="filters-panel mobile-collapsed"><button id="filter-toggle" class="filter-toggle" aria-expanded="false" aria-controls="filters">Filtrar catálogo <span>Marca, precio y características ＋</span></button><div class="section-heading"><h2>Afina tu búsqueda</h2><button id="reset" class="text-button" type="button">Limpiar</button></div>
+<aside class="filters-panel mobile-collapsed"><button id="filter-toggle" class="filter-toggle" aria-expanded="false" aria-controls="filters">Filtros avanzados <span>Marca, precio y características ＋</span></button><div class="section-heading"><h2>Afina tu búsqueda</h2><button id="reset" class="text-button" type="button">Limpiar</button></div>
 <form id="filters" class="filters">
-<label class="field"><span>Buscar pala</span><input id="search" type="search" placeholder="Nombre, marca, EAN…" autocomplete="off"></label>
 <div class="filter-pair"><label class="field"><span>Marca</span><select id="brand"><option value="">Todas las marcas</option></select></label><label class="field"><span>Tienda</span><select id="store"><option value="">Todas las tiendas</option></select></label></div>
 <label class="field"><span>Disponibilidad</span><select id="availability"><option value="">Todas</option><option value="available">Disponibles</option><option value="unavailable">Sin disponibilidad confirmada</option></select></label>
 <div class="filter-separator">Características publicadas</div>
@@ -35,5 +38,5 @@
 <div id="product-view" hidden></div>
 <footer><span>ComparaTuPala.es</span><p>Información publicada por cada tienda. El precio y el stock finales se confirman en su web.</p></footer>
 </main><div id="toast" class="toast" role="status"></div>
-<script src="app.js?v=dashboard-2"></script>
+<script src="app.js?v=home-catalog-1"></script>
 </body></html>

@@ -55,8 +55,9 @@ function bindImageFallback(root){root.querySelectorAll('.product-media img').for
 const saveButton = p => `<button type="button" class="save-button" data-save="${esc(p.id)}" aria-pressed="${state.saved.has(p.id)}" aria-label="${state.saved.has(p.id)?'Quitar de guardadas':'Guardar'} ${esc(p.name)}" title="Guardar en este dispositivo">${state.saved.has(p.id)?'♥':'♡'}</button>`;
 function card(row){
   const {product:p,best,offers}=row, source=best||offers[0], specs=['shape','play','face'].map(k=>feature(source,k)).filter(Boolean), d=discount(best);
+  const pvpSource=[best,...offers].find(o=>o&&validPrice(o.original_price)), pvp=pvpSource?.original_price;
   const href='#pala/'+encodeURIComponent(p.id);
-  return `<article class="card"><div class="card-visual">${d?`<span class="discount-badge">−${d}% sobre PVP</span>`:''}${saveButton(p)}<a href="${href}" tabindex="-1" aria-hidden="true">${productImage({...p,image_url:source.image_url||p.image_url})}</a></div><div class="card-body"><p class="brand">${esc(p.brand||'Marca sin indicar')}</p><h3><a href="${href}">${esc(p.name)}</a></h3><div class="feature-tags">${specs.map(v=>`<span>${esc(v)}</span>`).join('')}</div><p class="source-caption">${specs.length?'Ficha: '+esc(storeName(source.store)):'Características pendientes'}</p><div class="card-price"><div><small>${best?'Mejor precio disponible':'Sin oferta disponible'}</small><strong>${money(best?.price,best?.currency)}</strong></div><span class="store-name">${best?esc(storeName(best.store)):'Consulta las tiendas'}</span></div></div><div class="card-footer"><span class="store-dots">${p.stores.map(dot).join('')}${p.stores.length} tienda${p.stores.length===1?'':'s'}</span><a href="${href}">Comparar →</a></div></article>`;
+  return `<article class="card"><div class="card-visual">${d?`<span class="discount-badge">−${d}% sobre PVP</span>`:''}${saveButton(p)}<a href="${href}" tabindex="-1" aria-hidden="true">${productImage({...p,image_url:source.image_url||p.image_url})}</a></div><div class="card-body"><p class="brand">${esc(p.brand||'Marca sin indicar')}</p><h3><a href="${href}">${esc(p.name)}</a></h3><div class="feature-tags">${specs.map(v=>`<span>${esc(v)}</span>`).join('')}</div><p class="source-caption">${specs.length?'Ficha: '+esc(storeName(source.store)):'Características pendientes'}</p><div class="card-price"><div><small>${best?'Mejor precio disponible':'Sin oferta disponible'}</small><strong>${money(best?.price,best?.currency)}</strong>${validPrice(pvp)?`<span class="card-pvp">PVP ${money(pvp,pvpSource?.currency||best?.currency)}</span>`:''}</div><span class="store-name">${best?esc(storeName(best.store)):'Consulta las tiendas'}</span></div></div><div class="card-footer"><span class="store-dots">${p.stores.map(dot).join('')}${p.stores.length} tienda${p.stores.length===1?'':'s'}</span><a href="${href}">Comparar →</a></div></article>`;
 }
 // A series ends at the last successful observation, never at the export date or today.
 function offerHistory(offer,history){
@@ -153,7 +154,7 @@ function renderCatalog(){
 }
 function toast(message){const el=document.getElementById('toast');el.textContent=message;el.classList.add('show');clearTimeout(state.toastTimer);state.toastTimer=setTimeout(()=>el.classList.remove('show'),3500);}
 function toggleSaved(id){const was=state.saved.has(id);was?state.saved.delete(id):state.saved.add(id);let persisted=true;try{localStorage.setItem('comparatupala:saved',JSON.stringify([...state.saved]));}catch{persisted=false;}document.getElementById('saved-count').textContent=state.saved.size;document.querySelectorAll('[data-save]').forEach(el=>{if(el.dataset.save===id){const saved=state.saved.has(id),p=state.products.find(p=>p.id===id);el.setAttribute('aria-pressed',String(saved));el.setAttribute('aria-label',(saved?'Quitar de guardadas ':'Guardar ')+p.name);el.textContent=saved?'♥':'♡';}});if(state.savedOnly&&!state.product)renderCatalog();toast(persisted?(was?'Pala quitada de guardadas':'Pala guardada en este dispositivo'):'Guardada solo durante esta sesión: el navegador no permite almacenamiento');}
-function resetFilters(){document.getElementById('filters').reset();state.page=1;renderCatalog();}
+function resetFilters(){document.getElementById('filters').reset();document.getElementById('search').value='';state.page=1;renderCatalog();}
 function route(){
   const hash=location.hash,match=hash.match(/^#pala\/([^?]+)/);let p=null;
   if(match){try{p=state.products.find(p=>p.id===decodeURIComponent(match[1]));}catch{}}
@@ -161,6 +162,18 @@ function route(){
   if(p){document.title=p.name+' — ComparaTuPala.es';renderProduct(p);window.scrollTo(0,0);}
   else{state.savedOnly=hash==='#guardadas';document.title='ComparaTuPala.es — Explora, compara y elige';renderCatalog();if(match)toast('Esta pala ya no está en el catálogo exportado');}
   document.getElementById('nav-catalog').classList.toggle('active',!state.savedOnly);document.getElementById('nav-saved').classList.toggle('active',state.savedOnly);
+}
+function renderStats(products,stats){
+  const multi=products.filter(p=>p.stores.length>1).length;
+  const inStock=products.filter(p=>p.offers.some(available)).length;
+  const metrics=[
+    {value:products.length,label:'Palas en el catálogo',icon:'↗'},
+    {value:inStock,label:'Palas en stock',icon:'✓'},
+    {value:stats.offers,label:'Ofertas registradas',icon:'€'},
+    {value:stats.stores.length,label:'Tiendas comparadas',icon:'⌘'},
+    {value:multi,label:'Palas en varias tiendas',icon:'⇄',featured:true}
+  ];
+  document.getElementById('stats').innerHTML=metrics.map(({value,label,icon,featured=false})=>`<div class="stat${featured?' stat-featured':''}"><div><strong>${Number(value).toLocaleString('es-ES')}</strong><span>${label}</span></div><div class="stat-icon" aria-hidden="true">${icon}</div></div>`).join('');
 }
 async function load(){
   const get=async path=>{const r=await fetch(path,{cache:'no-cache'});if(!r.ok)throw new Error('No se pudo leer '+path);return r.json();};
@@ -172,15 +185,17 @@ async function load(){
   populate('store',stats.stores.map(s=>[s,storeName(s)]));populate('brand',products.map(p=>[norm(p.brand),p.brand||'']));
   for(const k of ['shape','level','play'])populate(k,products.flatMap(p=>p.offers.map(o=>{const v=feature(o,k);return [norm(v),v];})));
   document.getElementById('updated').textContent=date(stats.latest_check,true);
-  const multi=products.filter(p=>p.stores.length>1).length;
-  document.getElementById('stats').innerHTML=[[products.length,'Palas en el catálogo','↗'],[stats.offers,'Ofertas registradas','€'],[stats.stores.length,'Tiendas comparadas','⌘'],[multi,'Palas en varias tiendas','⇄']].map(([n,l,i])=>`<div class="stat"><div><strong>${Number(n).toLocaleString('es-ES')}</strong><span>${l}</span></div><div class="stat-icon" aria-hidden="true">${i}</div></div>`).join('');
+  renderStats(products,stats);
   route();
 }
 function init(){
   document.getElementById('filter-toggle').addEventListener('click',e=>{const panel=e.currentTarget.closest('aside'),collapsed=panel.classList.toggle('mobile-collapsed');e.currentTarget.setAttribute('aria-expanded',String(!collapsed));e.currentTarget.querySelector('span').textContent=collapsed?'Marca, precio y características ＋':'Ocultar filtros −';});
   document.querySelector('.skip-link').addEventListener('click',e=>{e.preventDefault();const el=document.querySelector(state.product?'.product-title':'#results-title');el.setAttribute('tabindex','-1');el.focus();});
-  document.getElementById('filters').addEventListener('submit',e=>e.preventDefault());
-  let timer;document.getElementById('filters').addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>{state.page=1;renderCatalog();},140);});
+  const filters=document.getElementById('filters'),search=document.getElementById('search');
+  filters.addEventListener('submit',e=>e.preventDefault());
+  let timer;const scheduleCatalogRender=()=>{clearTimeout(timer);timer=setTimeout(()=>{state.page=1;renderCatalog();},140);};
+  filters.addEventListener('input',scheduleCatalogRender);
+  if(!filters.contains(search))search.addEventListener('input',scheduleCatalogRender);
   document.getElementById('sort').addEventListener('change',()=>{state.page=1;renderCatalog();});
   document.getElementById('reset').addEventListener('click',resetFilters);
   document.addEventListener('click',e=>{const el=e.target.closest('button');if(!el)return;
