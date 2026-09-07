@@ -6,6 +6,85 @@
   // Activar solo cuando exista un proveedor/endpoint de newsletter configurado y revisado.
   const NEWSLETTER_ENDPOINT = '';
 
+  const setupAboutCollapsibles = () => {
+    const aboutSection = document.getElementById('quienes-somos');
+    const aboutHeading = aboutSection?.querySelector('.about-heading');
+
+    if (aboutSection && aboutHeading && !aboutSection.querySelector('.about-collapse-toggle')) {
+      const content = document.createElement('div');
+      content.className = 'about-collapsible-content';
+      content.id = 'about-collapsible-content';
+
+      [...aboutSection.children]
+        .filter((child) => child !== aboutHeading)
+        .forEach((child) => content.appendChild(child));
+      aboutSection.appendChild(content);
+
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'about-collapse-toggle';
+      toggle.setAttribute('aria-expanded', 'true');
+      toggle.setAttribute('aria-controls', content.id);
+      toggle.setAttribute('aria-label', 'Contraer sección Quiénes somos');
+      aboutHeading.appendChild(toggle);
+
+      const setAboutExpanded = (expanded) => {
+        content.hidden = !expanded;
+        aboutSection.classList.toggle('is-collapsed', !expanded);
+        toggle.setAttribute('aria-expanded', String(expanded));
+        toggle.setAttribute(
+          'aria-label',
+          expanded ? 'Contraer sección Quiénes somos' : 'Expandir sección Quiénes somos'
+        );
+      };
+
+      toggle.addEventListener('click', () => {
+        setAboutExpanded(toggle.getAttribute('aria-expanded') !== 'true');
+      });
+
+      document.querySelectorAll('a[href="#quienes-somos"]').forEach((link) => {
+        link.addEventListener('click', () => setAboutExpanded(true));
+      });
+    }
+
+    const legalCard = aboutSection?.querySelector('.about-card-wide');
+    if (legalCard && !legalCard.querySelector('.about-legal-toggle')) {
+      const legalTitle = legalCard.querySelector('h3');
+      const legalParagraphs = [...legalCard.children].filter(
+        (child) => child.tagName === 'P' && !child.classList.contains('about-card-label')
+      );
+
+      if (legalTitle && legalParagraphs.length) {
+        const legalContent = document.createElement('div');
+        legalContent.className = 'about-legal-content';
+        legalContent.id = 'about-legal-content';
+        legalParagraphs.forEach((paragraph) => legalContent.appendChild(paragraph));
+        legalCard.appendChild(legalContent);
+
+        const legalToggle = document.createElement('button');
+        legalToggle.type = 'button';
+        legalToggle.className = 'about-legal-toggle';
+        legalToggle.setAttribute('aria-expanded', 'true');
+        legalToggle.setAttribute('aria-controls', legalContent.id);
+        legalToggle.setAttribute('aria-label', 'Contraer marco normativo');
+        legalCard.appendChild(legalToggle);
+
+        legalToggle.addEventListener('click', () => {
+          const expanded = legalToggle.getAttribute('aria-expanded') !== 'true';
+          legalContent.hidden = !expanded;
+          legalCard.classList.toggle('is-collapsed', !expanded);
+          legalToggle.setAttribute('aria-expanded', String(expanded));
+          legalToggle.setAttribute(
+            'aria-label',
+            expanded ? 'Contraer marco normativo' : 'Expandir marco normativo'
+          );
+        });
+      }
+    }
+  };
+
+  setupAboutCollapsibles();
+
   const dialog = document.getElementById('contact-dialog');
   const openButtons = document.querySelectorAll('[data-open-contact]');
   const closeButton = document.getElementById('contact-close');
