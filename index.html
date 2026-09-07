@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="styles.css?v=home-catalog-1">
 <link rel="stylesheet" href="detail-enhancements.css?v=racket-detail-1">
 <link rel="stylesheet" href="about.css?v=about-legal-2">
+<link rel="stylesheet" href="contact-panel.css?v=contact-panel-1">
 </head>
 <body>
 <a class="skip-link" href="#main">Saltar al contenido</a>
@@ -55,7 +56,38 @@
 </div>
 <div id="product-view" hidden></div>
 <footer><span>ComparaTuPala.es</span><p>Información publicada por cada tienda. El precio y el stock finales se confirman en su web. · <a href="#quienes-somos">Quiénes somos</a> · <a href="#contacto">Contacto / reportar error</a></p></footer>
-</main><div id="toast" class="toast" role="status"></div>
+</main>
+
+<button class="contact-fab" type="button" data-open-contact="contact" aria-haspopup="dialog" aria-controls="contact-dialog" aria-label="Abrir contacto y novedades"><span class="contact-fab-dot" aria-hidden="true"></span><span class="contact-fab-label">Contacto y novedades</span></button>
+
+<dialog id="contact-dialog" class="contact-dialog" aria-labelledby="contact-panel-title">
+<div class="contact-panel">
+<header class="contact-panel-head"><div><p class="eyebrow">COMPARATUPALA · COMUNIDAD</p><h2 id="contact-panel-title">Contacto y novedades</h2><p>Un espacio discreto para consultas privadas y, más adelante, para recibir novedades del proyecto. Nada se suscribe automáticamente.</p></div><button id="contact-close" class="contact-close" type="button" aria-label="Cerrar">×</button></header>
+<div class="contact-tabs" role="tablist" aria-label="Contacto y newsletter"><button class="contact-tab" type="button" role="tab" id="contact-tab-contact" data-contact-tab="contact" aria-controls="contact-pane-contact" aria-selected="true">Contacto</button><button class="contact-tab" type="button" role="tab" id="contact-tab-newsletter" data-contact-tab="newsletter" aria-controls="contact-pane-newsletter" aria-selected="false" tabindex="-1">Novedades</button></div>
+<div class="contact-panel-body">
+<section id="contact-pane-contact" class="contact-pane" role="tabpanel" aria-labelledby="contact-tab-contact" data-contact-pane="contact">
+<p class="contact-intro">El canal privado está preparado para cuando ComparaTuPala disponga de una dirección de contacto. Hasta entonces puedes reportar correcciones mediante GitHub sin introducir aquí ningún dato personal.</p>
+<form id="private-contact-form" class="contact-form">
+<div class="contact-form-grid"><label>Nombre <small>Opcional</small><input name="name" type="text" autocomplete="name" maxlength="80" placeholder="Tu nombre"></label><label>Email de respuesta<input name="email" type="email" autocomplete="email" maxlength="160" required placeholder="tu@email.com"></label></div>
+<label>Motivo<select name="subject" required><option value="Consulta general">Consulta general</option><option value="Corrección de datos">Corrección de datos</option><option value="Sugerencia">Sugerencia</option><option value="Colaboración">Colaboración</option><option value="Privacidad">Privacidad</option></select></label>
+<label>Mensaje<textarea name="message" maxlength="3000" required placeholder="Cuéntanos en qué podemos ayudarte…"></textarea><small>Máximo 3.000 caracteres. No incluyas contraseñas ni información especialmente sensible.</small></label>
+<button class="contact-submit" type="submit">Preparar contacto privado</button><p id="contact-form-status" class="contact-status" role="status" aria-live="polite"></p>
+</form>
+<div class="contact-legal-note"><strong>Privacidad antes que funcionalidad.</strong> Actualmente este formulario no transmite ni almacena datos. Antes de activar el contacto privado se incorporará la información de privacidad aplicable —responsable, finalidad, base jurídica, conservación, destinatarios y ejercicio de derechos— en el propio punto de recogida.</div>
+<div class="contact-live-option"><div><strong>¿Es una corrección pública?</strong><p>Para errores de precios, enlaces, matching o fichas, el canal operativo actual sigue siendo GitHub.</p></div><a href="https://github.com/Lonsus/comparatupala-web/issues/new" target="_blank" rel="noopener noreferrer">Abrir incidencia ↗</a></div>
+</section>
+<section id="contact-pane-newsletter" class="contact-pane" role="tabpanel" aria-labelledby="contact-tab-newsletter" data-contact-pane="newsletter" hidden>
+<div class="newsletter-card"><span class="newsletter-badge">Preparado para el futuro</span><h3>Novedades de ComparaTuPala</h3><p>La idea es enviar contenido útil y poco frecuente: nuevas tiendas, mejoras del comparador, funciones nuevas y análisis del mercado de palas. Sin convertirlo en publicidad invasiva.</p><ul class="newsletter-bullets"><li>Suscripción voluntaria y separada del formulario de contacto.</li><li>Ninguna casilla marcada por defecto.</li><li>Confirmación de la dirección antes de incorporarla a la lista.</li><li>Baja sencilla disponible en cada comunicación cuando el servicio esté activo.</li></ul>
+<form id="newsletter-form" class="contact-form"><label>Email<input name="newsletter-email" type="email" autocomplete="email" required placeholder="tu@email.com"></label><label class="contact-check"><input name="newsletter-consent" type="checkbox" required><span>Quiero recibir por email novedades informativas de ComparaTuPala y entiendo que podré retirar mi consentimiento cuando quiera.</span></label><button class="contact-submit" type="submit">Quiero recibir novedades</button><p id="newsletter-form-status" class="contact-status" role="status" aria-live="polite"></p></form>
+<div class="contact-legal-note"><strong>Newsletter aún no activada.</strong> La dirección introducida no se envía ni se guarda mientras no exista un proveedor configurado. Antes de activarla se documentarán el proveedor, el tratamiento de datos, la política de privacidad y el mecanismo de baja.</div>
+</div>
+</section>
+</div>
+</div>
+</dialog>
+
+<div id="toast" class="toast" role="status"></div>
 <script src="app.js?v=home-catalog-1"></script>
 <script src="detail-enhancements.js?v=racket-detail-1"></script>
+<script src="contact-panel.js?v=contact-panel-1"></script>
 </body></html>
