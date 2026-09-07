@@ -25,16 +25,33 @@
     if (type) element.classList.add(type === 'ok' ? 'is-ok' : 'is-error');
   };
 
-  const selectTab = (name) => {
+  const selectTab = (name, { toggle = false } = {}) => {
+    const activeTab = tabs.find((tab) => tab.dataset.contactTab === name);
+    const activePane = panes.find((pane) => pane.dataset.contactPane === name);
+    if (!activeTab || !activePane) return;
+
+    const wasSelected = activeTab.getAttribute('aria-selected') === 'true';
+    const wasExpanded = activeTab.getAttribute('aria-expanded') !== 'false' && !activePane.hidden;
+    const shouldExpand = toggle && wasSelected ? !wasExpanded : true;
+
     tabs.forEach((tab) => {
       const selected = tab.dataset.contactTab === name;
       tab.setAttribute('aria-selected', String(selected));
+      tab.setAttribute('aria-expanded', String(selected && shouldExpand));
       tab.tabIndex = selected ? 0 : -1;
     });
+
     panes.forEach((pane) => {
-      pane.hidden = pane.dataset.contactPane !== name;
+      const isActive = pane.dataset.contactPane === name;
+      pane.hidden = !isActive || !shouldExpand;
     });
   };
+
+  tabs.forEach((tab) => {
+    const pane = panes.find((item) => item.dataset.contactPane === tab.dataset.contactTab);
+    const expanded = tab.getAttribute('aria-selected') === 'true' && pane && !pane.hidden;
+    tab.setAttribute('aria-expanded', String(Boolean(expanded)));
+  });
 
   const openDialog = (tab = 'contact') => {
     selectTab(tab);
@@ -58,7 +75,7 @@
   });
 
   tabs.forEach((tab, index) => {
-    tab.addEventListener('click', () => selectTab(tab.dataset.contactTab));
+    tab.addEventListener('click', () => selectTab(tab.dataset.contactTab, { toggle: true }));
     tab.addEventListener('keydown', (event) => {
       if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
       event.preventDefault();
