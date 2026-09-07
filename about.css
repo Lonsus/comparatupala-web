@@ -1,18 +1,30 @@
 .about-section{margin-top:46px;padding:34px;background:linear-gradient(145deg,#fff,#f8fbf9);border:1px solid var(--line);border-radius:22px;box-shadow:0 18px 46px rgba(17,28,24,.04)}
-.about-heading{display:grid;grid-template-columns:minmax(0,.9fr) minmax(320px,1.1fr);gap:34px;align-items:end;padding-bottom:28px;border-bottom:1px solid var(--line)}
+.about-heading{position:relative;display:grid;grid-template-columns:minmax(0,.9fr) minmax(320px,1.1fr);gap:34px;align-items:end;padding:0 58px 28px 0;border-bottom:1px solid var(--line)}
 .about-heading h2{font-size:clamp(30px,3vw,42px);margin-bottom:0}
 .about-lead{margin:0;color:var(--muted);font-size:16px;line-height:1.75;max-width:720px}
 .about-lead strong{color:var(--ink)}
+.about-collapse-toggle,.about-legal-toggle{display:grid;place-items:center;border:1px solid #c9d8cf;background:#fff;color:var(--green-dark);font:inherit;font-size:20px;font-weight:900;line-height:1;cursor:pointer;transition:background .15s ease,border-color .15s ease,transform .15s ease}
+.about-collapse-toggle{position:absolute;top:0;right:0;width:42px;height:42px;border-radius:11px}
+.about-collapse-toggle::before,.about-legal-toggle::before{content:"−"}
+.about-collapse-toggle[aria-expanded="false"]::before,.about-legal-toggle[aria-expanded="false"]::before{content:"+"}
+.about-collapse-toggle:hover,.about-legal-toggle:hover{background:var(--green-soft);border-color:#a9cbb5}
+.about-collapse-toggle:focus-visible,.about-legal-toggle:focus-visible{outline:3px solid rgba(80,190,120,.25);outline-offset:2px}
+.about-collapsible-content[hidden],.about-legal-content[hidden]{display:none}
+.about-section.is-collapsed{padding-bottom:24px}
+.about-section.is-collapsed .about-heading{padding-bottom:0;border-bottom:0}
 .about-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:24px}
 .about-card{position:relative;min-height:190px;padding:24px 24px 22px;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden}
 .about-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--green)}
-.about-card-wide{grid-column:1/-1;min-height:0}
+.about-card-wide{grid-column:1/-1;min-height:0;padding-right:76px}
 .about-card-label{display:inline-flex;align-items:center;gap:8px;margin:0 0 13px;color:var(--green-dark);font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
 .about-card h3{font-size:20px;margin-bottom:11px}
 .about-card p{margin:0;color:var(--muted);font-size:14px;line-height:1.65}
 .about-card strong{color:var(--ink)}
 .about-card a{font-weight:700;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
 .about-card a:hover{text-decoration-thickness:2px}
+.about-legal-toggle{position:absolute;top:22px;right:22px;width:38px;height:38px;border-radius:10px}
+.about-card-wide.is-collapsed{min-height:0;padding-bottom:18px}
+.about-card-wide.is-collapsed h3{margin-bottom:0}
 .about-transparency{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;margin-top:20px;padding:18px 20px;background:var(--dark);color:#fff;border-radius:14px}
 .about-transparency-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:#294336;color:var(--green);font-weight:800}
 .about-transparency strong{display:block;margin-bottom:4px;font-size:14px}
@@ -33,4 +45,4 @@
 .contact-actions small{display:block;margin-top:2px;color:var(--muted);font-size:11px;line-height:1.5}
 .topbar nav a[href="#quienes-somos"]{white-space:nowrap}
 @media(max-width:900px){.about-heading{grid-template-columns:1fr;gap:14px}.about-grid{grid-template-columns:1fr}.about-card-wide{grid-column:auto}.contact-section{grid-template-columns:1fr}.about-section{padding:26px}}
-@media(max-width:620px){.about-section{margin-top:34px;padding:20px;border-radius:16px}.about-heading{padding-bottom:22px}.about-heading h2{font-size:30px}.about-lead{font-size:14px}.about-card{min-height:0;padding:20px}.about-transparency{grid-template-columns:1fr}.about-transparency-icon{display:none}.contact-section{padding:20px}.contact-copy h3{font-size:22px}}
+@media(max-width:620px){.about-section{margin-top:34px;padding:20px;border-radius:16px}.about-heading{padding:0 50px 22px 0}.about-heading h2{font-size:30px}.about-lead{font-size:14px}.about-collapse-toggle{width:38px;height:38px}.about-card{min-height:0;padding:20px}.about-card-wide{padding-right:64px}.about-legal-toggle{top:18px;right:18px;width:36px;height:36px}.about-transparency{grid-template-columns:1fr}.about-transparency-icon{display:none}.contact-section{padding:20px}.contact-copy h3{font-size:22px}}
