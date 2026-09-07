@@ -12,7 +12,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible,su
 .dashboard-header:before{content:"";position:absolute;right:-120px;top:-190px;width:480px;height:480px;border-radius:50%;background:radial-gradient(circle,rgba(54,217,139,.18),rgba(54,217,139,0) 68%);pointer-events:none}
 .dashboard-header:after{content:"";position:absolute;right:80px;bottom:-180px;width:300px;height:300px;border:1px solid rgba(255,255,255,.05);border-radius:50%;pointer-events:none}
 .brand-lockup{position:relative;z-index:1;display:flex;align-items:center;gap:12px;padding-bottom:34px;border-bottom:1px solid rgba(255,255,255,.1)}
-.brand-mark{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:var(--accent);color:#0d2419;font-size:12px;font-weight:900;letter-spacing:-.02em;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+.brand-logo{display:block;flex-shrink:0;width:128px;height:auto;aspect-ratio:1;object-fit:contain;border-radius:14px;background:#000}
+@media(max-width:640px){.brand-logo{width:96px}}
 .brand-name,.brand-subtitle,.eyebrow,.hero-description,.updated,.section-kicker,.panel-hint,.results-note{margin:0}
 .brand-name{font-size:15px;font-weight:800;letter-spacing:-.01em}.brand-subtitle{margin-top:1px;color:#9eb0a7;font-size:12px}
 .hero-copy{position:relative;z-index:1;max-width:780px;padding-top:38px}
