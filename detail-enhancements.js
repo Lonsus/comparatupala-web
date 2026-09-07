@@ -108,3 +108,35 @@
     if (specsPanel instanceof HTMLDetailsElement) specsPanel.open = true;
   }, true);
 })();
+
+(() => {
+  if (document.querySelector('script[data-store-pages]')) return;
+  const script = document.createElement('script');
+  script.src = 'store-pages.js?v=store-pages-1';
+  script.async = false;
+  script.dataset.storePages = 'true';
+  script.addEventListener('load', () => {
+    if (state.loaded) route();
+  });
+  document.body.appendChild(script);
+})();
+
+document.addEventListener('click', event => {
+  const button = event.target.closest('#store-view .store-empty [data-store-reset]');
+  if (!button) return;
+  const values = {
+    'store-search': '',
+    'store-brand': '',
+    'store-availability': 'available',
+    'store-min-price': '',
+    'store-max-price': '',
+    'store-sort': 'price-asc'
+  };
+  Object.entries(values).forEach(([id, value]) => {
+    const element = document.getElementById(id);
+    if (element) element.value = value;
+  });
+  const brand = document.getElementById('store-brand');
+  if (brand) brand.dispatchEvent(new Event('change', {bubbles: true}));
+  document.getElementById('store-search')?.focus({preventScroll: true});
+}, true);
