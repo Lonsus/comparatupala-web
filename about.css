@@ -44,5 +44,10 @@
 .contact-secondary:hover{background:var(--green-soft);text-decoration:none}
 .contact-actions small{display:block;margin-top:2px;color:var(--muted);font-size:11px;line-height:1.5}
 .topbar nav a[href="#quienes-somos"]{white-space:nowrap}
+.about-section{scroll-margin-top:24px}
+.about-heading,.about-lead,.about-card,.about-transparency>div,.contact-copy,.contact-actions{min-width:0;overflow-wrap:anywhere}
+.about-collapse-toggle,.about-legal-toggle{width:44px!important;height:44px!important}
+.about-section.is-collapsed .about-lead{display:none}
+.about-section.is-collapsed .about-heading{grid-template-columns:1fr;min-height:44px;align-items:center}
 @media(max-width:900px){.about-heading{grid-template-columns:1fr;gap:14px}.about-grid{grid-template-columns:1fr}.about-card-wide{grid-column:auto}.contact-section{grid-template-columns:1fr}.about-section{padding:26px}}
 @media(max-width:620px){.about-section{margin-top:34px;padding:20px;border-radius:16px}.about-heading{padding:0 50px 22px 0}.about-heading h2{font-size:30px}.about-lead{font-size:14px}.about-collapse-toggle{width:38px;height:38px}.about-card{min-height:0;padding:20px}.about-card-wide{padding-right:64px}.about-legal-toggle{top:18px;right:18px;width:36px;height:36px}.about-transparency{grid-template-columns:1fr}.about-transparency-icon{display:none}.contact-section{padding:20px}.contact-copy h3{font-size:22px}}

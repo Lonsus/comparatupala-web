@@ -1,5 +1,5 @@
 'use strict';
-const state = {products:[], history:{}, stats:{}, saved:new Set(), page:1, pageSize:24, savedOnly:false, product:null, selectedOffer:null, range:0, hiddenStores:new Set()};
+const state = {products:[], history:{}, stats:{}, saved:new Set(), page:1, pageSize:24, savedOnly:false, product:null, selectedOffer:null, range:0, hiddenStores:new Set(), loaded:false, listPosition:null};
 const stores = {padelnuestro:{name:'Padel Nuestro',color:'#119759'}, zonadepadel:{name:'Zona de Pádel',color:'#5a6cdd'}, padelmarket:{name:'Padel Market',color:'#d18323'}};
 const storeName = s => stores[s]?.name || s;
 const storeColor = s => stores[s]?.color || '#758779';
@@ -92,7 +92,7 @@ function chartSvg(model,currency='EUR'){
   const grid=Array.from({length:5},(_,i)=>{const v=maxP-(maxP-minP)*i/4;return `<line x1="${l}" y1="${y(v)}" x2="${w-r}" y2="${y(v)}" class="chart-grid"/><text x="${l-12}" y="${y(v)+4}" text-anchor="end" class="chart-axis">${esc(money(v,currency))}</text>`;}).join('');
   const dates=Array.from({length:4},(_,i)=>{const tm=minT+(maxT-minT)*i/3;return `<text x="${x(tm)}" y="${h-15}" text-anchor="${i===0?'start':i===3?'end':'middle'}" class="chart-axis">${esc(date(new Date(tm).toISOString()))}</text>`;}).join('');
   const lines=series.map(s=>`<path data-series="${esc(s.offer.id)}" d="${stepPath(s.points,x,y)}" fill="none" stroke="${storeColor(s.offer.store)}" stroke-width="2.7" stroke-linejoin="round"/>${s.points.map(p=>`<circle cx="${x(p.time)}" cy="${y(p.price)}" r="${p.kind==='carry'?0:3.5}" fill="${storeColor(s.offer.store)}"><title>${esc(storeName(s.offer.store))} · ${esc(date(p.at,true))} · ${esc(money(p.price,currency))}${p.kind==='checked'?' · última lectura correcta':''}</title></circle>`).join('')}`).join('');
-  return `<div class="chart-wrap"><svg class="price-chart" viewBox="0 0 ${w} ${h}" role="img" aria-label="Histórico de precios por tienda: tramos horizontales y cambios verticales. Consulta los valores exactos en la tabla de registros.">${grid}${dates}${lines}</svg></div><div class="chart-legend">${series.map(s=>`<span>${dot(s.offer.store)}${esc(storeName(s.offer.store))}</span>`).join('')}</div>`;
+  return `<p class="scroll-hint">Desliza el gráfico para recorrer las fechas. Los valores exactos están en los registros.</p><div class="chart-wrap" tabindex="0" role="region" aria-label="Gráfico del histórico de precios"><svg class="price-chart" viewBox="0 0 ${w} ${h}" role="img" aria-label="Histórico de precios por tienda: tramos horizontales y cambios verticales. Consulta los valores exactos en la tabla de registros.">${grid}${dates}${lines}</svg></div><div class="chart-legend">${series.map(s=>`<span>${dot(s.offer.store)}${esc(storeName(s.offer.store))}</span>`).join('')}</div>`;
 }
 function renderOffers(p){const best=bestOffer(p.offers);return p.offers.map(o=>`<article class="offer-row ${best?.id===o.id?'best-offer':''}"><div><div class="offer-store">${dot(o.store)}${esc(storeName(o.store))}</div><p class="offer-info">${best?.id===o.id?'Mejor precio disponible · ':''}${esc(availabilityLabel(o))}</p></div><div class="offer-price">${money(o.price,o.currency)}${validPrice(o.original_price)&&validPrice(o.price)&&Number(o.original_price)>Number(o.price)?`<span class="offer-original">PVP <s>${money(o.original_price,o.currency)}</s> · −${discount(o)}%</span>`:''}</div><div class="offer-ean">EAN: ${esc(o.ean||'No publicado')}<br>Última lectura correcta: ${esc(date(o.last_successful_check||(!isError(o)?o.last_checked:null),true))}</div><span class="badge ${available(o)?'positive':'warning'}">${available(o)?'En stock':'Sin stock confirmado'}</span><div class="offer-actions"><button class="text-button" data-spec-offer="${esc(o.id)}">Ver características</button>${externalLink(o.url,'Ir a la tienda ↗')}</div></article>`).join('');}
 function renderComparison(p){
@@ -111,7 +111,7 @@ function renderChart(){
   const points=model.series.flatMap(s=>s.points.map(pt=>({...pt,store:s.offer.store}))),prices=points.map(p=>p.price);
   document.querySelector('#chart-output').innerHTML=`${prices.length?`<div class="history-stats"><div><span>Mínimo del periodo</span><strong>${money(Math.min(...prices),currency)}</strong></div><div><span>Máximo del periodo</span><strong>${money(Math.max(...prices),currency)}</strong></div><div><span>Último dato mostrado</span><strong class="stat-date">${esc(date(new Date(Math.max(...points.map(p=>p.time))).toISOString()))}</strong></div></div>`:''}${chartSvg(model,currency)}`;
   const records=points.filter(p=>p.kind!=='carry').sort((a,b)=>b.time-a.time);
-  document.querySelector('#history-records').innerHTML=`<summary>Ver registros del periodo (${records.length})</summary>${records.length?`<div class="table-wrap"><table><thead><tr><th>Fecha y hora</th><th>Tienda</th><th>Precio</th><th>Registro</th></tr></thead><tbody>${records.map(r=>`<tr><td>${esc(date(r.at,true))}</td><td>${esc(storeName(r.store))}</td><td>${money(r.price,currency)}</td><td>${r.kind==='checked'?'Última lectura correcta':'Dato registrado'}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">Sin registros en este periodo.</p>'}`;
+  document.querySelector('#history-records').innerHTML=`<summary>Ver registros del periodo (${records.length})</summary>${records.length?`<div class="table-wrap" tabindex="0" role="region" aria-label="Registros de precios del periodo"><table><thead><tr><th scope="col">Fecha y hora</th><th scope="col">Tienda</th><th scope="col">Precio</th><th scope="col">Registro</th></tr></thead><tbody>${records.map(r=>`<tr><td>${esc(date(r.at,true))}</td><td>${esc(storeName(r.store))}</td><td>${money(r.price,currency)}</td><td>${r.kind==='checked'?'Última lectura correcta':'Dato registrado'}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">Sin registros en este periodo.</p>'}`;
 }
 function renderProduct(p){
   state.product=p;state.range=0;state.hiddenStores=new Set();
@@ -135,6 +135,7 @@ function readFilters(){
   return {valid:parsed.valid&&!priceError,q:norm(val('search')),brand:val('brand'),store:val('store'),availability:val('availability'),shape:val('shape'),level:val('level'),play:val('play'),min,max,count:parsed.filter};
 }
 function renderCatalog(){
+  clearTimeout(state.filterTimer);
   const f=readFilters(),root=document.getElementById('products'),sort=document.getElementById('sort').value;
   const rows=f.valid?state.products.filter(p=>!state.savedOnly||state.saved.has(p.id)).map(p=>productMatch(p,f)).filter(Boolean):[];
   rows.sort((a,b)=>{const ap=a.best?Number(a.best.price):null,bp=b.best?Number(b.best.price):null;let result=0;
@@ -145,23 +146,69 @@ function renderCatalog(){
     return result||a.product.name.localeCompare(b.product.name,'es');
   });
   const pages=Math.max(1,Math.ceil(rows.length/state.pageSize));state.page=Math.min(state.page,pages);
-  root.innerHTML=rows.slice((state.page-1)*state.pageSize,state.page*state.pageSize).map(card).join('')||`<div class="empty"><h3>${!f.valid?'Revisa los filtros':state.savedOnly?'No hay palas guardadas con estos filtros':'No encontramos palas con estos filtros'}</h3><p>${state.savedOnly?'Pulsa el corazón de una pala para guardarla en este dispositivo.':'Prueba otra marca, amplía el precio o limpia la búsqueda.'}</p><button class="secondary-button" data-reset>Limpiar filtros</button></div>`;
+  const noSaved=state.savedOnly&&!state.saved.size;
+  root.innerHTML=rows.slice((state.page-1)*state.pageSize,state.page*state.pageSize).map(card).join('')||`<div class="empty"><h3>${!f.valid?'Revisa los filtros':noSaved?'Todavía no has guardado ninguna pala':state.savedOnly?'Tus guardadas no coinciden con estos filtros':'No encontramos palas con estos filtros'}</h3><p>${!f.valid?'Corrige los campos indicados o limpia los filtros para continuar.':noSaved?'Guarda las palas que te interesan pulsando el corazón. Las encontrarás aquí en este dispositivo.':'Prueba otra marca, amplía el precio o limpia la búsqueda.'}</p>${noSaved&&f.valid?'<a class="primary-button" href="#catalogo">Explorar catálogo →</a>':'<button class="secondary-button" data-reset>Limpiar filtros</button>'}</div>`;
   root.setAttribute('aria-busy','false');bindImageFallback(root);
   document.getElementById('results-title').textContent=state.savedOnly?'Tus palas guardadas':'Encuentra tu pala';
   document.getElementById('result-count').textContent=`${rows.length.toLocaleString('es-ES')} palas · ${rows.reduce((n,r)=>n+r.offers.length,0).toLocaleString('es-ES')} ofertas coinciden`;
   document.getElementById('pagination').innerHTML=rows.length?`<button data-page="${state.page-1}" ${state.page===1?'disabled':''}>← Anterior</button><span>Página ${state.page} de ${pages}</span><button data-page="${state.page+1}" ${state.page===pages?'disabled':''}>Siguiente →</button>`:'';
   document.getElementById('active-filters').innerHTML=filterIds.map(id=>{const el=document.getElementById(id);return el.value?`<button class="chip" data-clear="${id}" aria-label="Quitar filtro ${esc(el.closest('label').querySelector('span').textContent)}">${esc(el.closest('label').querySelector('span').textContent)}: ${esc(el.tagName==='SELECT'?el.selectedOptions[0].textContent:el.value)} ×</button>`:'';}).join('');
+  updateFilterSummary();
+}
+function focusSection(element,{scroll=true}={}){
+  if(!element)return;
+  if(element instanceof HTMLDetailsElement)element.open=true;
+  const target=element.matches('details')?element.querySelector('summary'):element;
+  if(!target.matches('summary'))target.setAttribute('tabindex','-1');
+  target.focus({preventScroll:true});
+  if(scroll)element.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});
+}
+function setFiltersExpanded(expanded){
+  document.getElementById('filter-content').hidden=!expanded;
+  document.getElementById('filter-toggle').setAttribute('aria-expanded',String(expanded));
+}
+function updateFilterSummary(){
+  const count=filterIds.filter(id=>id!=='search'&&document.getElementById(id).value).length;
+  const invalid=document.getElementById('filters').querySelector('[aria-invalid="true"]');
+  document.getElementById('filter-summary').textContent=invalid?'Revisa los filtros':count?`${count} filtro${count===1?' activo':'s activos'}`:'Marca, precio y características';
 }
 function toast(message){const el=document.getElementById('toast');el.textContent=message;el.classList.add('show');clearTimeout(state.toastTimer);state.toastTimer=setTimeout(()=>el.classList.remove('show'),3500);}
-function toggleSaved(id){const was=state.saved.has(id);was?state.saved.delete(id):state.saved.add(id);let persisted=true;try{localStorage.setItem('comparatupala:saved',JSON.stringify([...state.saved]));}catch{persisted=false;}document.getElementById('saved-count').textContent=state.saved.size;document.querySelectorAll('[data-save]').forEach(el=>{if(el.dataset.save===id){const saved=state.saved.has(id),p=state.products.find(p=>p.id===id);el.setAttribute('aria-pressed',String(saved));el.setAttribute('aria-label',(saved?'Quitar de guardadas ':'Guardar ')+p.name);el.textContent=saved?'♥':'♡';}});if(state.savedOnly&&!state.product)renderCatalog();toast(persisted?(was?'Pala quitada de guardadas':'Pala guardada en este dispositivo'):'Guardada solo durante esta sesión: el navegador no permite almacenamiento');}
+function toggleSaved(id){const was=state.saved.has(id);was?state.saved.delete(id):state.saved.add(id);let persisted=true;try{localStorage.setItem('comparatupala:saved',JSON.stringify([...state.saved]));}catch{persisted=false;}document.getElementById('saved-count').textContent=state.saved.size;document.querySelectorAll('[data-save]').forEach(el=>{if(el.dataset.save===id){const saved=state.saved.has(id),p=state.products.find(p=>p.id===id);el.setAttribute('aria-pressed',String(saved));el.setAttribute('aria-label',(saved?'Quitar de guardadas ':'Guardar ')+p.name);el.textContent=saved?'♥':'♡';}});if(state.savedOnly&&!state.product){const buttons=[...document.querySelectorAll('#products [data-save]')],index=buttons.findIndex(button=>button.dataset.save===id);renderCatalog();const next=document.querySelectorAll('#products [data-save]');(next[Math.min(index,next.length-1)]||document.getElementById('results-title')).focus({preventScroll:true});}toast(persisted?(was?'Pala quitada de guardadas':'Pala guardada en este dispositivo'):'Guardada solo durante esta sesión: el navegador no permite almacenamiento');}
 function resetFilters(){document.getElementById('filters').reset();document.getElementById('search').value='';state.page=1;renderCatalog();}
 function route(){
+  const previousProduct=state.product,previousSaved=state.savedOnly;
   const hash=location.hash,match=hash.match(/^#pala\/([^?]+)/);let p=null;
   if(match){try{p=state.products.find(p=>p.id===decodeURIComponent(match[1]));}catch{}}
   state.product=p;document.getElementById('catalog-view').hidden=!!p;document.getElementById('product-view').hidden=!p;
   if(p){document.title=p.name+' — ComparaTuPala.es';renderProduct(p);window.scrollTo(0,0);}
-  else{state.savedOnly=hash==='#guardadas';document.title='ComparaTuPala.es — Explora, compara y elige';renderCatalog();if(match)toast('Esta pala ya no está en el catálogo exportado');}
-  document.getElementById('nav-catalog').classList.toggle('active',!state.savedOnly);document.getElementById('nav-saved').classList.toggle('active',state.savedOnly);
+  else{
+    state.savedOnly=hash==='#guardadas';
+    const returning=previousProduct&&state.listPosition?.savedOnly===state.savedOnly;
+    if(previousSaved!==state.savedOnly)state.page=1;
+    document.title=state.savedOnly?'Tus palas guardadas — ComparaTuPala.es':'ComparaTuPala.es — Explora, compara y elige';
+    document.getElementById('catalog-view').classList.toggle('saved-view',state.savedOnly);
+    renderCatalog();
+    if(match)toast('Esta pala ya no está en el catálogo exportado');
+    requestAnimationFrame(()=>{
+      if(location.hash!==hash)return;
+      if(hash==='#quienes-somos'||hash==='#contacto'){
+        document.dispatchEvent(new CustomEvent('show-about'));
+        focusSection(document.getElementById(hash.slice(1)));
+      }else if(returning){
+        const link=[...document.querySelectorAll('.card h3 a')].find(a=>a.getAttribute('href')===state.listPosition.href);
+        (link||document.getElementById('results-title')).focus({preventScroll:true});
+        window.scrollTo({top:state.listPosition.y,behavior:'instant'});
+      }else if(hash==='#catalogo'||state.savedOnly||previousProduct||previousSaved){
+        focusSection(document.getElementById('results-title'));
+      }
+    });
+  }
+  const currentNav=hash==='#quienes-somos'||hash==='#contacto'?'nav-about':state.savedOnly?'nav-saved':'nav-catalog';
+  document.querySelectorAll('.topbar nav a').forEach(link=>{
+    const active=link.id===currentNav;
+    link.classList.toggle('active',active);
+    if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
+  });
 }
 function renderStats(products,stats){
   const multi=products.filter(p=>p.stores.length>1).length;
@@ -186,28 +233,39 @@ async function load(){
   for(const k of ['shape','level','play'])populate(k,products.flatMap(p=>p.offers.map(o=>{const v=feature(o,k);return [norm(v),v];})));
   document.getElementById('updated').textContent=date(stats.latest_check,true);
   renderStats(products,stats);
+  state.loaded=true;
   route();
 }
 function init(){
-  document.getElementById('filter-toggle').addEventListener('click',e=>{const panel=e.currentTarget.closest('aside'),collapsed=panel.classList.toggle('mobile-collapsed');e.currentTarget.setAttribute('aria-expanded',String(!collapsed));e.currentTarget.querySelector('span').textContent=collapsed?'Marca, precio y características ＋':'Ocultar filtros −';});
+  const compact=matchMedia('(max-width:800px)');
+  setFiltersExpanded(!compact.matches);
+  document.getElementById('catalog-summary').open=!compact.matches;
+  document.getElementById('filter-toggle').addEventListener('click',e=>setFiltersExpanded(e.currentTarget.getAttribute('aria-expanded')!=='true'));
+  document.getElementById('results-title').tabIndex=-1;
+  document.querySelectorAll('.topbar a').forEach(link=>link.addEventListener('click',event=>{
+    if(!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&!event.altKey&&link.hash===location.hash&&state.loaded){event.preventDefault();route();}
+  }));
   document.querySelector('.skip-link').addEventListener('click',e=>{e.preventDefault();const el=document.querySelector(state.product?'.product-title':'#results-title');el.setAttribute('tabindex','-1');el.focus();});
   const filters=document.getElementById('filters'),search=document.getElementById('search');
   filters.addEventListener('submit',e=>e.preventDefault());
-  let timer;const scheduleCatalogRender=()=>{clearTimeout(timer);timer=setTimeout(()=>{state.page=1;renderCatalog();},140);};
+  const scheduleCatalogRender=()=>{clearTimeout(state.filterTimer);state.filterTimer=setTimeout(()=>{state.page=1;renderCatalog();},140);};
   filters.addEventListener('input',scheduleCatalogRender);
   if(!filters.contains(search))search.addEventListener('input',scheduleCatalogRender);
   document.getElementById('sort').addEventListener('change',()=>{state.page=1;renderCatalog();});
   document.getElementById('reset').addEventListener('click',resetFilters);
-  document.addEventListener('click',e=>{const el=e.target.closest('button');if(!el)return;
+  document.addEventListener('click',e=>{
+    const productLink=e.target.closest('.card a[href^="#pala/"]');
+    if(productLink&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&!e.altKey)state.listPosition={y:window.scrollY,href:productLink.getAttribute('href'),savedOnly:state.savedOnly};
+    const el=e.target.closest('button');if(!el)return;
     if(el.dataset.save)toggleSaved(el.dataset.save);
-    if(el.hasAttribute('data-reset'))resetFilters();
-    if(el.dataset.clear){document.getElementById(el.dataset.clear).value='';state.page=1;renderCatalog();}
-    if(el.dataset.page){state.page=Number(el.dataset.page);renderCatalog();document.getElementById('results-title').scrollIntoView();}
-    if(el.dataset.specOffer){const inTabs=!!el.closest('#store-tabs');state.selectedOffer=el.dataset.specOffer;renderSpecs();history.replaceState(null,'','#pala/'+encodeURIComponent(state.product.id)+'?tienda='+state.selectedOffer);if(inTabs)document.querySelector(`#store-tabs [data-spec-offer="${state.selectedOffer}"]`).focus({preventScroll:true});else document.getElementById('specs-panel').scrollIntoView();}
+    if(el.hasAttribute('data-reset')){resetFilters();focusSection(document.getElementById('results-title'));}
+    if(el.dataset.clear){const chips=[...document.querySelectorAll('[data-clear]')],index=chips.indexOf(el);document.getElementById(el.dataset.clear).value='';state.page=1;renderCatalog();const next=document.querySelectorAll('[data-clear]');(next[Math.min(index,next.length-1)]||document.getElementById('results-title')).focus({preventScroll:true});}
+    if(el.dataset.page){state.page=Number(el.dataset.page);renderCatalog();focusSection(document.getElementById('results-title'));}
+    if(el.dataset.specOffer){const inTabs=!!el.closest('#store-tabs');state.selectedOffer=el.dataset.specOffer;renderSpecs();history.replaceState(null,'','#pala/'+encodeURIComponent(state.product.id)+'?tienda='+state.selectedOffer);if(inTabs)document.querySelector(`#store-tabs [data-spec-offer="${state.selectedOffer}"]`).focus({preventScroll:true});else focusSection(document.getElementById('specs-panel'));}
     if(el.hasAttribute('data-range')){state.range=Number(el.dataset.range);document.querySelectorAll('[data-range]').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.range)===state.range)));renderChart();}
   });
   document.addEventListener('change',e=>{if(e.target.hasAttribute('data-chart-store')){const s=e.target.dataset.chartStore;e.target.checked?state.hiddenStores.delete(s):state.hiddenStores.add(s);renderChart();}});
-  window.addEventListener('hashchange',()=>{if(state.products.length)route();});
+  window.addEventListener('hashchange',()=>{if(state.loaded)route();});
   load().catch(err=>{document.getElementById('products').innerHTML=`<div class="empty"><h3>No pudimos cargar el catálogo</h3><p>${esc(err.message)}</p><button class="secondary-button" onclick="location.reload()">Reintentar</button></div>`;document.getElementById('products').setAttribute('aria-busy','false');document.getElementById('updated').textContent='Datos no disponibles';});
 }
 init();
