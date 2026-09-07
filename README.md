@@ -30,6 +30,22 @@ La exportación genera/actualiza:
 - `data/history.json`
 - `data/stats.json`
 
+### Valoraciones externas de producto
+
+Cada `offer` de `data/products.json` puede incluir estos campos procedentes de la ficha pública del producto en la tienda:
+
+- `external_rating`: valoración original publicada por la tienda.
+- `external_rating_scale`: escala original de esa valoración.
+- `external_rating_normalized`: valoración normalizada a una escala de 5.
+- `external_review_count`: número de reseñas asociado, cuando la tienda lo publica.
+- `external_rating_source`: procedencia técnica usada por el scraper para extraer el dato.
+
+La interfaz muestra la valoración normalizada junto a la oferta del producto y solo muestra el número de reseñas cuando existe. Los valores ausentes o incoherentes no se convierten en cero. `external_rating_source` se conserva como metadato técnico y no se presenta al usuario como `json_ld` u otro identificador interno.
+
+Estas valoraciones corresponden al producto/oferta publicado por cada tienda: no representan una reputación global de la tienda, no se promedian entre productos y no se mezclan con `match_score`, que sigue siendo una señal interna de confianza del matching.
+
+Los JSON antiguos que no incluyan estos campos siguen siendo compatibles; la web mostrará discretamente que no hay valoración publicada.
+
 ## Dominio
 
 El archivo `CNAME` está configurado para:
