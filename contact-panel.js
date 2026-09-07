@@ -42,7 +42,9 @@
         setAboutExpanded(toggle.getAttribute('aria-expanded') !== 'true');
       });
 
-      document.querySelectorAll('a[href="#quienes-somos"]').forEach((link) => {
+      setAboutExpanded(false);
+      document.addEventListener('show-about', () => setAboutExpanded(true));
+      document.querySelectorAll('a[href="#quienes-somos"], a[href="#contacto"]').forEach((link) => {
         link.addEventListener('click', () => setAboutExpanded(true));
       });
     }
@@ -69,8 +71,7 @@
         legalToggle.setAttribute('aria-label', 'Contraer marco normativo');
         legalCard.appendChild(legalToggle);
 
-        legalToggle.addEventListener('click', () => {
-          const expanded = legalToggle.getAttribute('aria-expanded') !== 'true';
+        const setLegalExpanded = (expanded) => {
           legalContent.hidden = !expanded;
           legalCard.classList.toggle('is-collapsed', !expanded);
           legalToggle.setAttribute('aria-expanded', String(expanded));
@@ -78,7 +79,9 @@
             'aria-label',
             expanded ? 'Contraer marco normativo' : 'Expandir marco normativo'
           );
-        });
+        };
+        setLegalExpanded(false);
+        legalToggle.addEventListener('click', () => setLegalExpanded(legalToggle.getAttribute('aria-expanded') !== 'true'));
       }
     }
   };
@@ -104,44 +107,51 @@
     if (type) element.classList.add(type === 'ok' ? 'is-ok' : 'is-error');
   };
 
-  const selectTab = (name, { toggle = false } = {}) => {
+  const selectTab = (name) => {
     const activeTab = tabs.find((tab) => tab.dataset.contactTab === name);
     const activePane = panes.find((pane) => pane.dataset.contactPane === name);
     if (!activeTab || !activePane) return;
 
-    const wasSelected = activeTab.getAttribute('aria-selected') === 'true';
-    const wasExpanded = activeTab.getAttribute('aria-expanded') !== 'false' && !activePane.hidden;
-    const shouldExpand = toggle && wasSelected ? !wasExpanded : true;
-
     tabs.forEach((tab) => {
       const selected = tab.dataset.contactTab === name;
       tab.setAttribute('aria-selected', String(selected));
-      tab.setAttribute('aria-expanded', String(selected && shouldExpand));
       tab.tabIndex = selected ? 0 : -1;
     });
 
     panes.forEach((pane) => {
       const isActive = pane.dataset.contactPane === name;
-      pane.hidden = !isActive || !shouldExpand;
+      pane.hidden = !isActive;
     });
   };
 
-  tabs.forEach((tab) => {
-    const pane = panes.find((item) => item.dataset.contactPane === tab.dataset.contactTab);
-    const expanded = tab.getAttribute('aria-selected') === 'true' && pane && !pane.hidden;
-    tab.setAttribute('aria-expanded', String(Boolean(expanded)));
-  });
-
+  let returnFocus;
   const openDialog = (tab = 'contact') => {
     selectTab(tab);
-    if (typeof dialog.showModal === 'function') dialog.showModal();
-    else dialog.setAttribute('open', '');
+    returnFocus = document.activeElement;
+    dialog.showModal();
+    document.body.classList.add('contact-open');
+    closeButton?.focus({preventScroll:true});
   };
 
   const closeDialog = () => {
-    if (typeof dialog.close === 'function') dialog.close();
-    else dialog.removeAttribute('open');
+    dialog.close();
   };
+
+  dialog.addEventListener('close', () => {
+    document.body.classList.remove('contact-open');
+    returnFocus?.focus({preventScroll:true});
+  });
+
+  // Do not ask visitors to complete forms before their channels are available.
+  [[contactForm, CONTACT_EMAIL, contactStatus, 'El contacto privado aún no está disponible. Para corregir datos, puedes abrir una incidencia en GitHub.'],
+    [newsletterForm, NEWSLETTER_ENDPOINT, newsletterStatus, 'Las novedades por email aún no están disponibles.']].forEach(([form, configured, status, message]) => {
+    if (!form || configured) return;
+    form.classList.add('is-unavailable');
+    form.querySelectorAll('input, select, textarea, button').forEach(control => control.disabled = true);
+    setStatus(status, message);
+    form.prepend(status);
+    form.setAttribute('aria-describedby', status.id);
+  });
 
   openButtons.forEach((button) => {
     button.addEventListener('click', () => openDialog(button.dataset.openContact || 'contact'));
@@ -150,16 +160,17 @@
   closeButton?.addEventListener('click', closeDialog);
 
   dialog.addEventListener('click', (event) => {
-    if (event.target === dialog) closeDialog();
+    const rect = dialog.getBoundingClientRect();
+    if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) closeDialog();
   });
 
   tabs.forEach((tab, index) => {
-    tab.addEventListener('click', () => selectTab(tab.dataset.contactTab, { toggle: true }));
+    tab.addEventListener('click', () => selectTab(tab.dataset.contactTab));
     tab.addEventListener('keydown', (event) => {
-      if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
       event.preventDefault();
       const offset = event.key === 'ArrowRight' ? 1 : -1;
-      const next = tabs[(index + offset + tabs.length) % tabs.length];
+      const next = event.key === 'Home' ? tabs[0] : event.key === 'End' ? tabs.at(-1) : tabs[(index + offset + tabs.length) % tabs.length];
       selectTab(next.dataset.contactTab);
       next.focus();
     });

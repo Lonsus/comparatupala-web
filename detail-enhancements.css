@@ -24,6 +24,9 @@
 .featured-panel .table-wrap{margin-top:18px}
 .featured-panel .comparison-table th:first-child{position:sticky;left:0;z-index:1}
 .featured-panel .source-caption{margin:12px 0 0}
+.collapsible-panel>.panel-summary:focus-visible{outline-offset:-4px;border-radius:var(--radius)}
+.featured-panel .comparison-table thead th:first-child{z-index:3}
+.featured-panel .comparison-table th:first-child{min-width:110px;width:160px;max-width:160px}
 
 @media(max-width:1120px){
   .collapsible-panel>.panel-summary{padding:20px}
@@ -37,6 +40,7 @@
 }
 
 @media(max-width:540px){
+  .featured-panel .comparison-table th:first-child{width:110px;max-width:110px}
   .collapsible-panel>.panel-summary{padding:18px 14px;gap:12px}
   .collapsible-panel>.panel-content{padding:0 14px 18px}
   .collapsible-panel[open]>.panel-content{padding-top:18px}

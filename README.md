@@ -64,3 +64,14 @@ Las ofertas con stock desconocido o última lectura fallida no se recomiendan co
 Los precios no incluyen gastos de envío y se confirman en la tienda.
 
 Para una vista previa local, sirve esta carpeta con `python -m http.server 8765`.
+
+## UX y comprobación de la interfaz
+
+La [revisión global de UX](docs/UX_REVIEW.md) documenta los criterios de plegado,
+navegación y adaptación responsive, junto con las instrucciones de la prueba de
+navegador `tests/ux-smoke.cjs`. La web continúa funcionando sin proceso de build.
+
+Al actualizar datos desde el scraper, revisa el diff de los archivos de frontend:
+el exportador también genera HTML, CSS y JavaScript y puede sobrescribir las
+mejoras específicas de este repositorio. Para actualizar solo el catálogo,
+conserva el frontend y copia únicamente los JSON exportados de `data/`.
