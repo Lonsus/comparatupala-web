@@ -4,34 +4,87 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Compara precios de palas de pádel entre varias tiendas y consulta su evolución histórica.">
+  <meta name="theme-color" content="#111c18">
   <title>ComparaTuPala.es — Comparador de palas de pádel</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <main class="container">
-    <header>
-      <p class="eyebrow">COMPARATUPALA.ES</p>
-      <h1>Compara tu pala</h1>
-      <p class="muted">Compara precios, disponibilidad y evolución histórica entre tiendas de pádel.</p>
-      <p id="updated" class="muted"></p>
-    </header>
+  <a class="skip-link" href="#products">Saltar a resultados</a>
 
-    <section class="controls">
-      <input id="search" type="search" placeholder="Buscar pala, marca, EAN o referencia">
-      <select id="store"><option value="">Todas las tiendas</option></select>
-      <select id="availability">
-        <option value="">Toda disponibilidad</option>
-        <option value="available">Disponibles</option>
-        <option value="unavailable">No disponibles</option>
-      </select>
-      <input id="offer-count" type="text" placeholder="Ofertas: >=2" aria-label="Filtrar por número de ofertas" title="Ejemplos: >1, <2, >=1, <=3, =2 o 2">
-    </section>
+  <div class="page-shell">
+    <main class="container">
+      <header class="dashboard-header">
+        <div class="brand-lockup" aria-label="ComparaTuPala.es">
+          <span class="brand-mark" aria-hidden="true">CTP</span>
+          <div>
+            <p class="brand-name">ComparaTuPala.es</p>
+            <p class="brand-subtitle">Comparador de pádel</p>
+          </div>
+        </div>
 
-    <section id="stats" class="stats"></section>
-    <section id="products" class="products"></section>
-  </main>
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> PRECIOS DE MÚLTIPLES TIENDAS</p>
+          <h1>Encuentra tu pala.<br><span>Paga el mejor precio.</span></h1>
+          <p class="hero-description">Compara precios, disponibilidad y evolución histórica de palas de pádel en un único lugar.</p>
+          <p id="updated" class="updated"></p>
+        </div>
+      </header>
 
-  <dialog id="detail">
+      <section class="filters-panel" aria-labelledby="filters-title">
+        <div class="panel-heading">
+          <div>
+            <p class="section-kicker">BÚSQUEDA</p>
+            <h2 id="filters-title">Filtra el catálogo</h2>
+          </div>
+          <p class="panel-hint">Los resultados se actualizan automáticamente</p>
+        </div>
+
+        <div class="controls">
+          <label class="field field-search">
+            <span>Producto</span>
+            <div class="input-shell">
+              <span class="field-icon" aria-hidden="true">⌕</span>
+              <input id="search" type="search" placeholder="Pala, marca, EAN o referencia" autocomplete="off">
+            </div>
+          </label>
+
+          <label class="field">
+            <span>Tienda</span>
+            <select id="store"><option value="">Todas las tiendas</option></select>
+          </label>
+
+          <label class="field">
+            <span>Disponibilidad</span>
+            <select id="availability">
+              <option value="">Toda disponibilidad</option>
+              <option value="available">Disponibles</option>
+              <option value="unavailable">No disponibles</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>N.º de ofertas</span>
+            <input id="offer-count" type="text" placeholder="Ej. >=2" aria-label="Filtrar por número de ofertas" title="Ejemplos: >1, <2, >=1, <=3, =2 o 2" inputmode="text">
+          </label>
+        </div>
+      </section>
+
+      <section id="stats" class="stats" aria-label="Resumen del catálogo"></section>
+
+      <section class="results-section" aria-labelledby="results-title">
+        <div class="results-heading">
+          <div>
+            <p class="section-kicker">CATÁLOGO</p>
+            <h2 id="results-title">Palas comparadas</h2>
+          </div>
+          <p class="results-note">Selecciona una pala para ver todas sus ofertas e histórico de precios.</p>
+        </div>
+        <section id="products" class="products" aria-live="polite"></section>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="detail" aria-label="Detalle de producto">
     <button id="close" class="close" aria-label="Cerrar">×</button>
     <div id="detail-content"></div>
   </dialog>
