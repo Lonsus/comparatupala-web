@@ -57,27 +57,13 @@ el tamaño de ventana no revierte una elección de plegado hecha por el usuario.
   icono de contacto reconocible en móvil.
 - El diálogo utiliza la altura dinámica de la ventana y desplazamiento interior.
 
-## Verificación reproducible
+## Validación realizada
 
-`tests/ux-smoke.cjs` levanta un servidor local temporal y utiliza Playwright.
-Comprueba 320, 390, 540, 768, 1024, 1440 y 1920 px: desbordamientos de página,
-plegado, filtros inválidos, búsqueda, paginación, foco, guardadas, navegación de
-vuelta, tablas, histórico, contacto y enlaces directos. También comprueba un
-catálogo vacío y errores de carga. Bloquea peticiones externas: las imágenes de
-tiendas se muestran mediante el estado de imagen no disponible.
+Se comprobó la interfaz en Edge a 320, 390, 540, 768, 1024, 1440 y 1920 px,
+además del diálogo en horizontal a 844×390. Se revisaron desbordamientos,
+plegado, filtros, búsqueda, paginación, foco, guardadas, navegación de vuelta,
+tablas, histórico, contacto, enlaces directos, catálogo vacío y errores de carga.
 
-```sh
-npm install --no-save --package-lock=false playwright@1.62.1
-npx playwright install chromium
-node tests/ux-smoke.cjs
-```
-
-Variables opcionales:
-
-- `BROWSER_CHANNEL=msedge`: utilizar Microsoft Edge instalado.
-- `PLAYWRIGHT_MODULE`: ruta a una instalación existente de Playwright.
-- `UX_SCREENSHOTS`: carpeta de salida para capturas de catálogo, ficha y contacto.
-
-La comprobación automatizada utiliza Chromium/Edge. La emulación de anchos no
-sustituye una comprobación en Safari/iOS o en dispositivos físicos. Las capturas
-se guardan fuera del repositorio y los datos del catálogo no se alteran.
+La emulación de anchos no sustituye una comprobación en Safari/iOS o en
+dispositivos físicos. Las imágenes externas se bloquearon durante estas
+comprobaciones para validar también el estado de imagen no disponible.
