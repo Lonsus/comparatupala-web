@@ -39,6 +39,13 @@ function bindImageFallback(root=document){
   },{once:true}));
 }
 
+function productEans(product){
+  const values=[product.ean,...product.offers.map(o=>o.ean)]
+    .map(value=>String(value??'').trim())
+    .filter(value=>value && !['none','null','n/a','-'].includes(value.toLowerCase()));
+  return [...new Set(values)];
+}
+
 async function load(){
   const [products,history,stats]=await Promise.all([
     fetch('data/products.json').then(r=>r.json()),
@@ -125,9 +132,17 @@ function chartSvg(points,currency='EUR'){
   const series=stores.map((store,i)=>({store,color:palette[i%palette.length],points:points.filter(p=>p.store===store)}));
   const grid=Array.from({length:5},(_,i)=>{const value=maxP-(maxP-minP)*i/4;const yy=top+(height-top-bottom)*i/4;return `<line x1="${left}" y1="${yy}" x2="${width-right}" y2="${yy}" class="chart-grid"/><text x="${left-10}" y="${yy+4}" text-anchor="end" class="chart-axis">${esc(money(value,currency))}</text>`}).join('');
   const lines=series.map(s=>{
-    const coords=s.points.map(p=>`${x(new Date(p.at).getTime()).toFixed(1)},${y(Number(p.price)).toFixed(1)}`).join(' ');
-    const dots=s.points.map(p=>`<circle cx="${x(new Date(p.at).getTime())}" cy="${y(Number(p.price))}" r="4" fill="${s.color}"><title>${esc(s.store)} · ${new Date(p.at).toLocaleDateString('es-ES')} · ${esc(money(p.price,p.currency||currency))}</title></circle>`).join('');
-    return `<polyline points="${coords}" fill="none" stroke="${s.color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>${dots}`;
+    const normalized=s.points
+      .map(p=>({point:p,time:new Date(p.at).getTime(),price:Number(p.price)}))
+      .filter(p=>Number.isFinite(p.time)&&Number.isFinite(p.price));
+    if(!normalized.length) return '';
+    let path=`M ${x(normalized[0].time).toFixed(1)} ${y(normalized[0].price).toFixed(1)}`;
+    for(let i=1;i<normalized.length;i++){
+      const next=normalized[i];
+      path+=` H ${x(next.time).toFixed(1)} V ${y(next.price).toFixed(1)}`;
+    }
+    const dots=normalized.map(({point,time,price})=>`<circle cx="${x(time)}" cy="${y(price)}" r="4" fill="${s.color}"><title>${esc(s.store)} · ${new Date(point.at).toLocaleDateString('es-ES')} · ${esc(money(point.price,point.currency||currency))}</title></circle>`).join('');
+    return `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>${dots}`;
   }).join('');
   const startLabel=new Date(minT).toLocaleDateString('es-ES');
   const endLabel=new Date(maxT).toLocaleDateString('es-ES');
@@ -137,14 +152,15 @@ function chartSvg(points,currency='EUR'){
 
 function openProduct(id){
   const p=state.products.find(x=>x.id===id); if(!p) return;
-  const offers=p.offers.map(o=>`<tr><td>${esc(o.store)}</td><td>${money(o.price,o.currency)}</td><td>${o.original_price==null?'—':money(o.original_price,o.currency)}</td><td>${o.discount_percent==null?'—':esc(o.discount_percent)+' %'}</td><td>${esc(o.availability||'Desconocida')}</td><td><a href="${esc(o.url)}" target="_blank" rel="noopener noreferrer">Ver tienda</a></td></tr>`).join('');
+  const offers=p.offers.map(o=>`<tr><td>${esc(o.store)}</td><td>${esc(o.ean||'—')}</td><td>${money(o.price,o.currency)}</td><td>${o.original_price==null?'—':money(o.original_price,o.currency)}</td><td>${o.discount_percent==null?'—':esc(o.discount_percent)+' %'}</td><td>${esc(o.availability||'Desconocida')}</td><td><a href="${esc(o.url)}" target="_blank" rel="noopener noreferrer">Ver tienda</a></td></tr>`).join('');
+  const eans=productEans(p);
   const points=historyPoints(p);
   const stats=historyStats(points);
   const currency=p.offers.find(o=>o.price!=null)?.currency||'EUR';
   const summary=stats?`<section class="history-stats"><div><span>Mínimo histórico</span><strong>${money(stats.min,currency)}</strong></div><div><span>Máximo histórico</span><strong>${money(stats.max,currency)}</strong></div><div><span>Precio medio</span><strong>${money(stats.avg,currency)}</strong></div></section>`:'';
   const detail=document.querySelector('#detail-content');
-  detail.innerHTML=`<section class="detail-header">${productImage(p,true)}<div><p class="brand">${esc(p.brand||'')}</p><h2>${esc(p.name)}</h2><p class="best">Mejor precio actual: <strong>${money(p.best_price,currency)}</strong></p></div></section>
-    <div class="table-wrap"><table><thead><tr><th>Tienda</th><th>Precio</th><th>PVP</th><th>Descuento</th><th>Disponibilidad</th><th></th></tr></thead><tbody>${offers}</tbody></table></div>
+  detail.innerHTML=`<section class="detail-header">${productImage(p,true)}<div><p class="brand">${esc(p.brand||'')}</p><h2>${esc(p.name)}</h2><p class="best">Mejor precio actual: <strong>${money(p.best_price,currency)}</strong></p><p class="product-ean"><strong>EAN:</strong> ${eans.length?eans.map(esc).join(' · '):'No disponible'}</p></div></section>
+    <div class="table-wrap"><table><thead><tr><th>Tienda</th><th>EAN</th><th>Precio</th><th>PVP</th><th>Descuento</th><th>Disponibilidad</th><th></th></tr></thead><tbody>${offers}</tbody></table></div>
     <h3>Evolución del precio</h3>${summary}${chartSvg(points,currency)}
     <details class="history-list"><summary>Ver histórico en lista (${points.length})</summary>${points.length?`<div class="history">${points.map(x=>`<div><span>${new Date(x.at).toLocaleDateString('es-ES')}</span><span>${esc(x.store)}</span><strong>${money(x.price,x.currency)}</strong></div>`).join('')}</div>`:'<p class="muted">Sin histórico público todavía.</p>'}</details>`;
   bindImageFallback(detail);
