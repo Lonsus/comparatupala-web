@@ -6,12 +6,13 @@
 <title>ComparaTuPala.es — Explora, compara y elige</title>
 <link rel="stylesheet" href="styles.css?v=home-catalog-1">
 <link rel="stylesheet" href="detail-enhancements.css?v=racket-detail-1">
+<link rel="stylesheet" href="about.css?v=about-legal-2">
 </head>
 <body>
 <a class="skip-link" href="#main">Saltar al contenido</a>
 <header class="topbar">
 <a class="brand-lockup" href="#catalogo" aria-label="ComparaTuPala.es, catálogo"><img src="assets/comparatupala-logo-green.png" alt="" width="54" height="54"><span>Compara<span class="accent">TuPala</span><small>.es / TU COMPARADOR DE PÁDEL</small></span></a>
-<nav aria-label="Principal"><a href="#catalogo" id="nav-catalog">Catálogo</a><a href="#guardadas" id="nav-saved">Guardadas <span id="saved-count">0</span></a></nav>
+<nav aria-label="Principal"><a href="#catalogo" id="nav-catalog">Catálogo</a><a href="#guardadas" id="nav-saved">Guardadas <span id="saved-count">0</span></a><a href="#quienes-somos" id="nav-about">Quiénes somos</a></nav>
 <span class="topbar-note"><i class="status-dot"></i> Tres tiendas. Una decisión.</span>
 </header>
 <main id="main" class="container">
@@ -35,9 +36,25 @@
 <label class="field"><span>N.º de ofertas</span><input id="offer-count" type="text" placeholder="Ej. >=2" aria-describedby="offer-help"><small id="offer-help">Admite &gt;1, &lt;3, =2, &gt;=2 o &lt;=3.</small></label><p id="filter-error" class="error" role="status"></p>
 </form></aside>
 <section class="results-section" aria-labelledby="results-title"><div class="results-heading"><div><p class="eyebrow">EL CATÁLOGO</p><h2 id="results-title">Encuentra tu pala</h2><p id="result-count" class="muted" role="status"></p></div><label class="sort field"><span>Ordenar por</span><select id="sort"><option value="compare">Más tiendas para comparar</option><option value="price-asc">Menor precio</option><option value="price-desc">Mayor precio</option><option value="discount">Mayor descuento</option><option value="name">Nombre: A–Z</option></select></label></div><div id="active-filters" class="active-filters"></div><div id="products" class="products" aria-busy="true"><p class="empty">Preparando las palas y sus ofertas…</p></div><nav id="pagination" class="pagination" aria-label="Páginas del catálogo"></nav></section>
-</div></div>
+</div>
+<section id="quienes-somos" class="about-section" aria-labelledby="about-title">
+<div class="about-heading"><div><p class="eyebrow">TRANSPARENCIA · INDEPENDENCIA · INFORMACIÓN</p><h2 id="about-title">Quiénes somos</h2></div><p class="about-lead"><strong>ComparaTuPala es un proyecto personal e independiente</strong> creado para reunir, ordenar y presentar información pública sobre palas de pádel, facilitando que cualquier usuario pueda comparar productos y consultar distintas tiendas desde un único lugar.</p></div>
+<div class="about-grid">
+<article class="about-card"><p class="about-card-label">01 · Origen</p><h3>Un proyecto personal</h3><p>ComparaTuPala nace como una iniciativa personal orientada a aplicar tecnología y tratamiento de datos a una necesidad concreta: hacer más sencilla, clara y útil la comparación de palas de pádel disponibles en distintas tiendas.</p></article>
+<article class="about-card"><p class="about-card-label">02 · Finalidad</p><h3>Información, no venta</h3><p>La finalidad de ComparaTuPala es <strong>exclusivamente informativa y comparativa</strong>. El proyecto no vende palas, no formaliza contratos de compraventa y <strong>no tiene finalidad comercial</strong>. Cualquier compra se realiza directamente en la web de la tienda correspondiente.</p></article>
+<article class="about-card"><p class="about-card-label">03 · Datos publicados</p><h3>La tienda mantiene la última palabra</h3><p>Los precios, disponibilidad, características y demás datos mostrados proceden de información publicada por tiendas o fabricantes y pueden cambiar. Antes de comprar, el usuario debe comprobar en la web de la tienda el precio final, el stock, los gastos de envío y las condiciones aplicables.</p></article>
+<article class="about-card"><p class="about-card-label">04 · Marcas y terceros</p><h3>Independencia y atribución</h3><p>Las marcas, nombres comerciales, imágenes y demás signos distintivos pertenecen a sus respectivos titulares. Su aparición en ComparaTuPala tiene una finalidad identificativa e informativa y no implica patrocinio, asociación o respaldo por parte de fabricantes o tiendas, salvo que se indique expresamente.</p></article>
+<article class="about-card about-card-wide"><p class="about-card-label">05 · Marco normativo</p><h3>Referencias legales y de privacidad</h3><p>El proyecto se desarrolla teniendo como referencia, cuando resulten aplicables, la <a href="https://www.boe.es/eli/es/l/2002/07/11/34/con" target="_blank" rel="noopener noreferrer">Ley 34/2002, de Servicios de la Sociedad de la Información y de Comercio Electrónico (LSSI)</a>, el <a href="https://eur-lex.europa.eu/eli/reg/2016/679/?locale=ES" target="_blank" rel="noopener noreferrer">Reglamento (UE) 2016/679, Reglamento General de Protección de Datos (RGPD)</a> y la <a href="https://www.boe.es/eli/es/lo/2018/12/05/3/con" target="_blank" rel="noopener noreferrer">Ley Orgánica 3/2018, de Protección de Datos Personales y garantía de los derechos digitales (LOPDGDD)</a>. Para el uso de cookies y tecnologías similares se toma como referencia la <a href="https://www.aepd.es/recurso-multimedia/guia-sobre-el-uso-de-las-cookies" target="_blank" rel="noopener noreferrer">Guía sobre el uso de las cookies de la Agencia Española de Protección de Datos (AEPD)</a>.</p></article>
+</div>
+<div class="about-transparency"><span class="about-transparency-icon" aria-hidden="true">i</span><div><strong>Compromiso de transparencia</strong><p>Esta sección describe la naturaleza y finalidad actual del proyecto. Si la web incorpora en el futuro servicios que impliquen nuevas obligaciones de información, tratamiento de datos personales, cookies no técnicas o actividad comercial, los textos y mecanismos legales deberán adaptarse antes de activar esas funcionalidades.</p></div></div>
+<section id="contacto" class="contact-section" aria-labelledby="contact-title">
+<div class="contact-copy"><p class="eyebrow">CONTACTO · CORRECCIONES</p><h3 id="contact-title">¿Has encontrado un error?</h3><p>Si detectas un precio incorrecto, una pala duplicada, una ficha asociada a la tienda equivocada, un enlace roto o cualquier otro dato que deba revisarse, puedes comunicarlo directamente en el apartado de incidencias del repositorio de ComparaTuPala.</p><p class="contact-privacy"><strong>Importante:</strong> las incidencias de GitHub son públicas. No incluyas datos personales, credenciales, información privada ni ningún contenido confidencial.</p></div>
+<div class="contact-actions"><a class="contact-primary" href="https://github.com/Lonsus/comparatupala-web/issues/new" target="_blank" rel="noopener noreferrer">Reportar un error en GitHub ↗</a><a class="contact-secondary" href="https://github.com/Lonsus/comparatupala-web/issues" target="_blank" rel="noopener noreferrer">Ver incidencias abiertas ↗</a><small>Para ayudarnos a localizarlo, indica la pala o tienda afectada, la URL, qué dato parece incorrecto y, si es posible, la fecha en la que lo detectaste.</small></div>
+</section>
+</section>
+</div>
 <div id="product-view" hidden></div>
-<footer><span>ComparaTuPala.es</span><p>Información publicada por cada tienda. El precio y el stock finales se confirman en su web.</p></footer>
+<footer><span>ComparaTuPala.es</span><p>Información publicada por cada tienda. El precio y el stock finales se confirman en su web. · <a href="#quienes-somos">Quiénes somos</a> · <a href="#contacto">Contacto / reportar error</a></p></footer>
 </main><div id="toast" class="toast" role="status"></div>
 <script src="app.js?v=home-catalog-1"></script>
 <script src="detail-enhancements.js?v=racket-detail-1"></script>
