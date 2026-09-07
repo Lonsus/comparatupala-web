@@ -6,14 +6,31 @@
 .about-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:24px}
 .about-card{position:relative;min-height:190px;padding:24px 24px 22px;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden}
 .about-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--green)}
+.about-card-wide{grid-column:1/-1;min-height:0}
 .about-card-label{display:inline-flex;align-items:center;gap:8px;margin:0 0 13px;color:var(--green-dark);font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
 .about-card h3{font-size:20px;margin-bottom:11px}
 .about-card p{margin:0;color:var(--muted);font-size:14px;line-height:1.65}
 .about-card strong{color:var(--ink)}
+.about-card a{font-weight:700;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+.about-card a:hover{text-decoration-thickness:2px}
 .about-transparency{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;margin-top:20px;padding:18px 20px;background:var(--dark);color:#fff;border-radius:14px}
 .about-transparency-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:#294336;color:var(--green);font-weight:800}
 .about-transparency strong{display:block;margin-bottom:4px;font-size:14px}
 .about-transparency p{margin:0;color:#c1d2c6;font-size:13px;line-height:1.6}
+.contact-section{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(280px,.75fr);gap:28px;align-items:center;margin-top:20px;padding:26px;background:#fff;border:1px solid var(--line);border-radius:16px}
+.contact-copy .eyebrow{margin-bottom:7px}
+.contact-copy h3{font-size:24px;margin-bottom:10px}
+.contact-copy>p:not(.eyebrow){margin-bottom:10px;color:var(--muted);font-size:14px;line-height:1.65}
+.contact-copy>p:last-child{margin-bottom:0}
+.contact-privacy{padding:11px 13px;background:#f5f8f6;border-left:3px solid var(--green);border-radius:0 8px 8px 0}
+.contact-privacy strong{color:var(--ink)}
+.contact-actions{display:grid;gap:10px}
+.contact-primary,.contact-secondary{display:flex;align-items:center;justify-content:center;min-height:46px;padding:11px 16px;border-radius:9px;font-size:14px;font-weight:750;text-align:center}
+.contact-primary{background:var(--dark);color:#fff;border:1px solid var(--dark)}
+.contact-primary:hover{color:var(--green);text-decoration:none}
+.contact-secondary{background:#fff;color:var(--green-dark);border:1px solid #bdd3c5}
+.contact-secondary:hover{background:var(--green-soft);text-decoration:none}
+.contact-actions small{display:block;margin-top:2px;color:var(--muted);font-size:11px;line-height:1.5}
 .topbar nav a[href="#quienes-somos"]{white-space:nowrap}
-@media(max-width:900px){.about-heading{grid-template-columns:1fr;gap:14px}.about-grid{grid-template-columns:1fr}.about-section{padding:26px}}
-@media(max-width:620px){.about-section{margin-top:34px;padding:20px;border-radius:16px}.about-heading{padding-bottom:22px}.about-heading h2{font-size:30px}.about-lead{font-size:14px}.about-card{min-height:0;padding:20px}.about-transparency{grid-template-columns:1fr}.about-transparency-icon{display:none}}
+@media(max-width:900px){.about-heading{grid-template-columns:1fr;gap:14px}.about-grid{grid-template-columns:1fr}.about-card-wide{grid-column:auto}.contact-section{grid-template-columns:1fr}.about-section{padding:26px}}
+@media(max-width:620px){.about-section{margin-top:34px;padding:20px;border-radius:16px}.about-heading{padding-bottom:22px}.about-heading h2{font-size:30px}.about-lead{font-size:14px}.about-card{min-height:0;padding:20px}.about-transparency{grid-template-columns:1fr}.about-transparency-icon{display:none}.contact-section{padding:20px}.contact-copy h3{font-size:22px}}
