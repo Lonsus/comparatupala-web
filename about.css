@@ -1,0 +1,19 @@
+.about-section{margin-top:46px;padding:34px;background:linear-gradient(145deg,#fff,#f8fbf9);border:1px solid var(--line);border-radius:22px;box-shadow:0 18px 46px rgba(17,28,24,.04)}
+.about-heading{display:grid;grid-template-columns:minmax(0,.9fr) minmax(320px,1.1fr);gap:34px;align-items:end;padding-bottom:28px;border-bottom:1px solid var(--line)}
+.about-heading h2{font-size:clamp(30px,3vw,42px);margin-bottom:0}
+.about-lead{margin:0;color:var(--muted);font-size:16px;line-height:1.75;max-width:720px}
+.about-lead strong{color:var(--ink)}
+.about-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:24px}
+.about-card{position:relative;min-height:190px;padding:24px 24px 22px;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.about-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--green)}
+.about-card-label{display:inline-flex;align-items:center;gap:8px;margin:0 0 13px;color:var(--green-dark);font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.about-card h3{font-size:20px;margin-bottom:11px}
+.about-card p{margin:0;color:var(--muted);font-size:14px;line-height:1.65}
+.about-card strong{color:var(--ink)}
+.about-transparency{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;margin-top:20px;padding:18px 20px;background:var(--dark);color:#fff;border-radius:14px}
+.about-transparency-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:#294336;color:var(--green);font-weight:800}
+.about-transparency strong{display:block;margin-bottom:4px;font-size:14px}
+.about-transparency p{margin:0;color:#c1d2c6;font-size:13px;line-height:1.6}
+.topbar nav a[href="#quienes-somos"]{white-space:nowrap}
+@media(max-width:900px){.about-heading{grid-template-columns:1fr;gap:14px}.about-grid{grid-template-columns:1fr}.about-section{padding:26px}}
+@media(max-width:620px){.about-section{margin-top:34px;padding:20px;border-radius:16px}.about-heading{padding-bottom:22px}.about-heading h2{font-size:30px}.about-lead{font-size:14px}.about-card{min-height:0;padding:20px}.about-transparency{grid-template-columns:1fr}.about-transparency-icon{display:none}}
