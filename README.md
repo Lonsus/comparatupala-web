@@ -75,6 +75,27 @@ No deben subirse a este repositorio:
 - Histórico por escalones: precio horizontal hasta cada cambio y hasta la última lectura correcta de la tienda. Los errores y retiradas del catálogo no alargan artificialmente la serie.
 - Periodos de 7, 30, 90 días o todo el histórico, selección de tiendas y tabla de registros.
 
+## Fichas de tiendas
+
+La web dispone de navegación por hash para explorar las tiendas monitorizadas como entidades propias:
+
+```text
+#tiendas
+#tienda/padelnuestro
+#tienda/zonadepadel
+#tienda/padelmarket
+```
+
+`#tiendas` muestra las tiendas configuradas en el frontend y sus métricas calculadas. Cada `#tienda/{slug}` filtra los mismos productos y ofertas de `data/products.json`; no existe una copia separada del catálogo por tienda.
+
+Las estadísticas de tienda se calculan en cliente a partir de los datos exportados. Se mantiene la distinción entre **palas diferentes** (`product.id`) y **ofertas**. La disponibilidad reutiliza la misma función `available()` del catálogo principal, el precio medio solo usa ofertas disponibles con precio válido y la última actualización se basa en `last_successful_check`.
+
+Las fichas de tienda incluyen búsqueda, marca, disponibilidad, rango de precio y ordenación. Las tarjetas muestran exclusivamente el precio y la disponibilidad de la tienda visitada; nunca sustituyen ese precio por el mejor precio global. Desde cada tarjeta se puede volver a la ficha completa de la pala para comparar todas las tiendas.
+
+Las valoraciones externas que aparezcan dentro de una tarjeta siguen perteneciendo al producto/oferta correspondiente. **No se calcula ni se muestra una valoración global de la tienda, una media de ratings de productos ni un ComparaTuPala Score.** Los metadatos de tienda dejan esos campos preparados como `null` para una futura fuente metodológicamente válida.
+
+No forman parte de esta capa las cuentas de usuario, Supabase, favoritos de tiendas, comentarios ni reseñas propias de ComparaTuPala.
+
 Los datos JSON se generan desde el exportador del repositorio `padel-scraper`.
 Las ofertas con stock desconocido o última lectura fallida no se recomiendan como mejor precio disponible.
 Los precios no incluyen gastos de envío y se confirman en la tienda.
