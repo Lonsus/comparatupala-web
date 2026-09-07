@@ -48,3 +48,19 @@ No deben subirse a este repositorio:
 - logs
 - HTML capturado por las spiders
 - ejecutables internos
+
+
+## Dashboard y fichas de palas
+
+- Catálogo verde con filtros por marca, tienda, stock, forma, nivel, estilo de juego, precio y número de ofertas; ordenación y paginación.
+- Palas guardadas en el navegador de este dispositivo.
+- Fichas enlazables con ofertas, EAN y características/descripción seleccionables por tienda.
+- Tabla comparativa que mantiene separados los valores de cada fuente y señala los que difieren.
+- Histórico por escalones: precio horizontal hasta cada cambio y hasta la última lectura correcta de la tienda. Los errores y retiradas del catálogo no alargan artificialmente la serie.
+- Periodos de 7, 30, 90 días o todo el histórico, selección de tiendas y tabla de registros.
+
+Los datos JSON se generan desde el exportador del repositorio `padel-scraper`.
+Las ofertas con stock desconocido o última lectura fallida no se recomiendan como mejor precio disponible.
+Los precios no incluyen gastos de envío y se confirman en la tienda.
+
+Para una vista previa local, sirve esta carpeta con `python -m http.server 8765`.

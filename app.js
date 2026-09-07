@@ -1,172 +1,198 @@
-const state={products:[],history:{},stats:{}};
-const money=(v,c='EUR')=>v==null?'—':new Intl.NumberFormat('es-ES',{style:'currency',currency:c||'EUR'}).format(v);
-const esc=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
-const isError=o=>String(o.status||'').trim().toLowerCase()==='error';
-const isUnknownAvailability=o=>{
-  const value=String(o.availability||'').trim().toLowerCase();
-  return !value || ['desconocida','desconocido','unknown'].includes(value);
-};
-const available=o=>{
-  if(o.store==='padelnuestro' && (isError(o) || isUnknownAvailability(o))) return false;
-  return o.active!==false && !['OutOfStock','SoldOut','Discontinued','MissingFromCatalog'].includes(o.availability);
-};
-const parseOfferCountFilter=value=>{
-  const raw=String(value||'').trim();
-  if(!raw) return {valid:true,filter:null};
-  const match=raw.match(/^(>=|<=|>|<|=)?\s*(\d+)$/);
-  if(!match) return {valid:false,filter:null};
-  return {valid:true,filter:{operator:match[1]||'=',value:Number(match[2])}};
-};
-const matchesOfferCount=(count,filter)=>{
-  if(!filter) return true;
-  if(filter.operator==='>') return count>filter.value;
-  if(filter.operator==='<') return count<filter.value;
-  if(filter.operator==='>=') return count>=filter.value;
-  if(filter.operator==='<=') return count<=filter.value;
-  return count===filter.value;
-};
-
-function productImage(p,detail=false){
-  const classes=`product-media ${detail?'detail-media':'card-media'}`;
-  if(!p.image_url) return `<div class="${classes} is-missing"><span>Sin imagen</span></div>`;
-  return `<div class="${classes}"><img src="${esc(p.image_url)}" alt="${esc(p.name)}" loading="lazy"><span>Sin imagen</span></div>`;
+'use strict';
+const state = {products:[], history:{}, stats:{}, saved:new Set(), page:1, pageSize:24, savedOnly:false, product:null, selectedOffer:null, range:0, hiddenStores:new Set()};
+const stores = {padelnuestro:{name:'Padel Nuestro',color:'#119759'}, zonadepadel:{name:'Zona de Pádel',color:'#5a6cdd'}, padelmarket:{name:'Padel Market',color:'#d18323'}};
+const storeName = s => stores[s]?.name || s;
+const storeColor = s => stores[s]?.color || '#758779';
+const dot = s => `<i class="store-dot" style="background:${storeColor(s)}" aria-hidden="true"></i>`;
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+const norm = s => String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+const validPrice = v => v!==null && v!==undefined && v!=='' && Number.isFinite(Number(v)) && Number(v)>=0;
+const money = (v,c='EUR') => validPrice(v) ? new Intl.NumberFormat('es-ES',{style:'currency',currency:c||'EUR'}).format(Number(v)) : '—';
+const timestamp = v => v ? new Date(v).getTime() : NaN;
+const date = (v,full=false) => Number.isFinite(timestamp(v)) ? new Intl.DateTimeFormat('es-ES',{dateStyle:'medium',...(full?{timeStyle:'short'}:{}),timeZone:'Europe/Madrid'}).format(new Date(v)) : 'Sin fecha';
+const safeUrl = value => {try {const u=new URL(value);return ['https:','http:'].includes(u.protocol)?u.href:'';}catch{return '';}};
+const externalLink = (url,label,classes='') => safeUrl(url)?`<a class="${classes}" href="${esc(safeUrl(url))}" target="_blank" rel="noopener noreferrer">${label}</a>`:'<span class="muted">Enlace no disponible</span>';
+const isError = o => norm(o.status)==='error';
+const availabilityCode = o => norm(o.availability).split('/').pop();
+const available = o => o.active!==false && !isError(o) && ['instock','limitedavailability','onlineonly','available','disponible','en stock'].includes(availabilityCode(o));
+function availabilityLabel(o){
+  if(isError(o)) return 'Sin verificar · última lectura con error';
+  if(o.active===false || availabilityCode(o)==='missingfromcatalog') return 'Fuera de catálogo';
+  if(available(o)) return 'Disponible';
+  return ({outofstock:'Agotada',soldout:'Agotada',discontinued:'Descatalogada',preorder:'Preventa',presale:'Preventa',backorder:'Bajo pedido'})[availabilityCode(o)] || 'Stock sin confirmar';
 }
-
-function bindImageFallback(root=document){
-  root.querySelectorAll('.product-media img').forEach(img=>img.addEventListener('error',()=>{
-    const media=img.closest('.product-media');
-    if(media){media.classList.add('is-missing');img.remove();}
-  },{once:true}));
+const bestOffer = offers => offers.filter(o=>available(o)&&validPrice(o.price)).sort((a,b)=>Number(a.price)-Number(b.price))[0] || null;
+const discount = o => o && validPrice(o.original_price) && validPrice(o.price) && Number(o.original_price)>Number(o.price) ? Math.round((1-Number(o.price)/Number(o.original_price))*100) : 0;
+const aliases = {shape:['forma'],level:['nivel','nivel de juego'],play:['tipo de juego','juego'],balance:['balance'],weight:['peso'],face:['cara','caras','material caras'],core:['nucleo'],frame:['marco'],hardness:['dureza','tacto'],surface:['superficie','rugosidad'],year:['ano','temporada'],player:['jugador','sexo'],profile:['perfil']};
+const featureLabels = {shape:'Forma',level:'Nivel de juego',play:'Tipo de juego',balance:'Balance',weight:'Peso',face:'Caras',core:'Núcleo',frame:'Marco',hardness:'Dureza / tacto',surface:'Superficie',year:'Temporada',player:'Jugador',profile:'Perfil'};
+const featureEntries = o => Object.entries(o.features && typeof o.features==='object' && !Array.isArray(o.features)?o.features:{}).filter(([,v])=>v!==null && v!=='' && v!==undefined).map(([k,v])=>[k,typeof v==='object'?JSON.stringify(v):String(v)]);
+function feature(o,key){return featureEntries(o).filter(([k])=>(aliases[key]||[key]).includes(norm(k))).map(([,v])=>v).join(' · ');}
+function comparisonRows(offers){
+  const maps=offers.map(o=>{const m=new Map();for(const [key,value] of featureEntries(o)){const canonical=Object.keys(aliases).find(k=>aliases[k].includes(norm(key)))||norm(key);const prev=m.get(canonical);m.set(canonical,{label:featureLabels[canonical]||key,value:prev?prev.value+' · '+value:value});}return m;});
+  return [...new Set(maps.flatMap(m=>[...m.keys()]))].map(key=>({label:maps.find(m=>m.has(key)).get(key).label,values:maps.map(m=>m.get(key)?.value||null)}));
 }
-
-function productEans(product){
-  const values=[product.ean,...product.offers.map(o=>o.ean)]
-    .map(value=>String(value??'').trim())
-    .filter(value=>value && !['none','null','n/a','-'].includes(value.toLowerCase()));
-  return [...new Set(values)];
-}
-
-async function load(){
-  const [products,history,stats]=await Promise.all([
-    fetch('data/products.json').then(r=>r.json()),
-    fetch('data/history.json').then(r=>r.json()),
-    fetch('data/stats.json').then(r=>r.json())
-  ]);
-  Object.assign(state,{products,history,stats});
-  const store=document.querySelector('#store');
-  stats.stores.forEach(s=>store.insertAdjacentHTML('beforeend',`<option value="${esc(s)}">${esc(s)}</option>`));
-  document.querySelector('#updated').textContent=`Datos exportados: ${new Date(stats.generated_at).toLocaleString('es-ES')}`;
-  document.querySelector('#stats').innerHTML=`<div><strong>${stats.products}</strong><span>productos</span></div><div><strong>${stats.offers}</strong><span>ofertas</span></div><div><strong>${stats.stores.length}</strong><span>tiendas</span></div>`;
-  render();
-}
-
-function render(){
-  const q=document.querySelector('#search').value.trim().toLowerCase();
-  const store=document.querySelector('#store').value;
-  const availability=document.querySelector('#availability').value;
-  const offerCountInput=document.querySelector('#offer-count');
-  const parsedOfferCountFilter=parseOfferCountFilter(offerCountInput.value);
-  offerCountInput.setAttribute('aria-invalid',String(!parsedOfferCountFilter.valid));
-  if(!parsedOfferCountFilter.valid){
-    document.querySelector('#products').innerHTML='<p class="empty">Filtro de ofertas no válido. Usa, por ejemplo: &gt;1, &lt;2, &gt;=1, &lt;=3, =2 o 2.</p>';
-    return;
-  }
-  const offerCountFilter=parsedOfferCountFilter.filter;
-  const rows=state.products.filter(p=>{
-    const scopedOffers=store?p.offers.filter(o=>o.store===store):p.offers;
-    if(store && !scopedOffers.length) return false;
-    const offerCount=p.offers.length;
-    if(!matchesOfferCount(offerCount,offerCountFilter)) return false;
-    const text=[p.name,p.brand,...scopedOffers.flatMap(o=>[o.ean,o.reference,o.store,o.name])].join(' ').toLowerCase();
-    if(q && !text.includes(q)) return false;
-    if(availability==='available' && !scopedOffers.some(available)) return false;
-    if(availability==='unavailable' && scopedOffers.some(available)) return false;
+function parseOfferCountFilter(value){const raw=String(value||'').trim();if(!raw)return {valid:true,filter:null};const m=raw.match(/^(>=|<=|>|<|=)?\s*(\d+)$/);return m?{valid:true,filter:{operator:m[1]||'=',value:Number(m[2])}}:{valid:false,filter:null};}
+function matchesOfferCount(n,f){return !f || ({'>':n>f.value,'<':n<f.value,'>=':n>=f.value,'<=':n<=f.value,'=':n===f.value})[f.operator];}
+function productMatch(p,f){
+  if(f.brand && norm(p.brand)!==f.brand) return null;
+  if(!matchesOfferCount(p.offers.length,f.count)) return null;
+  const scoped=p.offers.filter(o=>!f.store||o.store===f.store);
+  if(!scoped.length) return null;
+  if(f.availability==='unavailable' && scoped.some(available)) return null;
+  const eligible=scoped.filter(o=>{
+    if(f.availability==='available'&&!available(o)) return false;
+    if(f.q&&!norm([p.name,p.brand,p.ean,o.ean,o.reference,o.sku,o.name,...featureEntries(o).flat()].join(' ')).includes(f.q)) return false;
+    if(['shape','level','play'].some(k=>f[k]&&norm(feature(o,k))!==f[k])) return false;
+    if((f.min!==null||f.max!==null)&&(!available(o)||!validPrice(o.price))) return false;
+    if(f.min!==null&&Number(o.price)<f.min) return false;
+    if(f.max!==null&&Number(o.price)>f.max) return false;
     return true;
   });
-  const products=document.querySelector('#products');
-  products.innerHTML=rows.map(card).join('') || '<p class="empty">No hay resultados.</p>';
-  products.querySelectorAll('[data-product]').forEach(el=>el.addEventListener('click',()=>openProduct(el.dataset.product)));
-  bindImageFallback(products);
+  return eligible.length?{product:p,offers:eligible,best:bestOffer(eligible)}:null;
 }
-
-function card(p){
-  const best=p.offers.find(o=>o.price===p.best_price) || p.offers[0];
-  const offerCount=p.offers.length;
-  return `<article class="card" data-product="${esc(p.id)}">
-    <div class="card-main">
-      ${productImage(p)}
-      <div class="card-content">
-        <div class="card-top"><div><span class="brand">${esc(p.brand||'Marca desconocida')}</span><h2>${esc(p.name)}</h2></div><div class="price"><small>Desde</small><strong>${money(p.best_price,best?.currency)}</strong></div></div>
-        <div class="tags">${p.stores.map(s=>`<span>${esc(s)}</span>`).join('')}<span>${offerCount} oferta${offerCount===1?'':'s'}</span></div>
-      </div>
-    </div>
-  </article>`;
+function productImage(p,detail=false){const url=safeUrl(p.image_url);return `<div class="product-media ${detail?'detail-media':''} ${url?'':'is-missing'}">${url?`<img src="${esc(url)}" alt="${esc(p.name)}" loading="lazy">`:''}<span>Imagen no disponible</span></div>`;}
+function bindImageFallback(root){root.querySelectorAll('.product-media img').forEach(img=>{const fail=()=>{img.parentElement.classList.add('is-missing');img.remove();};img.addEventListener('error',fail,{once:true});if(img.complete&&!img.naturalWidth)fail();});}
+const saveButton = p => `<button type="button" class="save-button" data-save="${esc(p.id)}" aria-pressed="${state.saved.has(p.id)}" aria-label="${state.saved.has(p.id)?'Quitar de guardadas':'Guardar'} ${esc(p.name)}" title="Guardar en este dispositivo">${state.saved.has(p.id)?'♥':'♡'}</button>`;
+function card(row){
+  const {product:p,best,offers}=row, source=best||offers[0], specs=['shape','play','face'].map(k=>feature(source,k)).filter(Boolean), d=discount(best);
+  const href='#pala/'+encodeURIComponent(p.id);
+  return `<article class="card"><div class="card-visual">${d?`<span class="discount-badge">−${d}% sobre PVP</span>`:''}${saveButton(p)}<a href="${href}" tabindex="-1" aria-hidden="true">${productImage({...p,image_url:source.image_url||p.image_url})}</a></div><div class="card-body"><p class="brand">${esc(p.brand||'Marca sin indicar')}</p><h3><a href="${href}">${esc(p.name)}</a></h3><div class="feature-tags">${specs.map(v=>`<span>${esc(v)}</span>`).join('')}</div><p class="source-caption">${specs.length?'Ficha: '+esc(storeName(source.store)):'Características pendientes'}</p><div class="card-price"><div><small>${best?'Mejor precio disponible':'Sin oferta disponible'}</small><strong>${money(best?.price,best?.currency)}</strong></div><span class="store-name">${best?esc(storeName(best.store)):'Consulta las tiendas'}</span></div></div><div class="card-footer"><span class="store-dots">${p.stores.map(dot).join('')}${p.stores.length} tienda${p.stores.length===1?'':'s'}</span><a href="${href}">Comparar →</a></div></article>`;
 }
-
-function historyPoints(product){
-  return product.offers.flatMap(o=>(state.history[String(o.id)]||[])
-    .filter(x=>x.price!=null)
-    .map(x=>({...x,store:o.store,currency:o.currency,url:o.url,offerId:o.id})))
-    .sort((a,b)=>String(a.at).localeCompare(String(b.at)));
+// A series ends at the last successful observation, never at the export date or today.
+function offerHistory(offer,history){
+  const checked=offer.last_successful_check || (!isError(offer)&&availabilityCode(offer)!=='missingfromcatalog'?offer.last_checked:null), end=timestamp(checked);
+  const points=(history[String(offer.id)]||[]).filter(p=>!isError(p)&&availabilityCode(p)!=='missingfromcatalog'&&validPrice(p.price)&&Number.isFinite(timestamp(p.at))&&(!Number.isFinite(end)||timestamp(p.at)<=end)).map(p=>({...p,price:Number(p.price),time:timestamp(p.at),kind:'record'}));
+  if(Number.isFinite(end)&&validPrice(offer.price)) points.push({at:checked,time:end,price:Number(offer.price),kind:'checked'});
+  points.sort((a,b)=>a.time-b.time);
+  const result=[];
+  for(const p of points){if(result.length&&result.at(-1).time===p.time)result[result.length-1]=p;else result.push(p);}
+  return result;
 }
-
-function historyStats(points){
-  const prices=points.map(p=>Number(p.price)).filter(Number.isFinite);
-  if(!prices.length) return null;
-  const min=Math.min(...prices),max=Math.max(...prices),avg=prices.reduce((a,b)=>a+b,0)/prices.length;
-  return {min,max,avg};
+function chartSeries(product,history,days=0,hidden=new Set()){
+  const all=product.offers.map(o=>({offer:o,points:offerHistory(o,history)})).filter(s=>s.points.length);
+  if(!all.length)return {series:[],minT:0,maxT:0};
+  const maxT=Math.max(...all.map(s=>s.points.at(-1).time));
+  const minT=days?maxT-days*86400000:Math.min(...all.map(s=>s.points[0].time));
+  const series=all.filter(s=>!hidden.has(s.offer.store)).map(s=>{
+    const inside=s.points.filter(p=>p.time>=minT&&p.time<=maxT);
+    // Preserve the known value at the left edge, only if this series reaches the window.
+    const previous=s.points.filter(p=>p.time<minT).at(-1);
+    if(previous&&s.points.at(-1).time>=minT)inside.unshift({...previous,time:minT,at:new Date(minT).toISOString(),kind:'carry'});
+    return {...s,points:inside};
+  }).filter(s=>s.points.length);
+  return {series,minT,maxT};
 }
-
-function chartSvg(points,currency='EUR'){
-  if(!points.length) return '<p class="muted">Sin histórico público todavía.</p>';
-  const width=900,height=360,left=72,right=24,top=30,bottom=52;
-  const times=points.map(p=>new Date(p.at).getTime()).filter(Number.isFinite);
-  const prices=points.map(p=>Number(p.price)).filter(Number.isFinite);
-  if(!times.length||!prices.length) return '<p class="muted">Sin histórico público todavía.</p>';
-  let minT=Math.min(...times),maxT=Math.max(...times); if(minT===maxT) maxT=minT+86400000;
-  let minP=Math.min(...prices),maxP=Math.max(...prices); const pad=Math.max((maxP-minP)*.12,1); minP=Math.max(0,minP-pad); maxP+=pad; if(minP===maxP) maxP=minP+1;
-  const x=t=>left+(t-minT)/(maxT-minT)*(width-left-right);
-  const y=p=>top+(maxP-p)/(maxP-minP)*(height-top-bottom);
-  const stores=[...new Set(points.map(p=>p.store))];
-  const palette=['#2563eb','#dc2626','#059669','#7c3aed','#ea580c','#0891b2'];
-  const series=stores.map((store,i)=>({store,color:palette[i%palette.length],points:points.filter(p=>p.store===store)}));
-  const grid=Array.from({length:5},(_,i)=>{const value=maxP-(maxP-minP)*i/4;const yy=top+(height-top-bottom)*i/4;return `<line x1="${left}" y1="${yy}" x2="${width-right}" y2="${yy}" class="chart-grid"/><text x="${left-10}" y="${yy+4}" text-anchor="end" class="chart-axis">${esc(money(value,currency))}</text>`}).join('');
-  const lines=series.map(s=>{
-    const normalized=s.points
-      .map(p=>({point:p,time:new Date(p.at).getTime(),price:Number(p.price)}))
-      .filter(p=>Number.isFinite(p.time)&&Number.isFinite(p.price));
-    if(!normalized.length) return '';
-    let path=`M ${x(normalized[0].time).toFixed(1)} ${y(normalized[0].price).toFixed(1)}`;
-    for(let i=1;i<normalized.length;i++){
-      const next=normalized[i];
-      path+=` H ${x(next.time).toFixed(1)} V ${y(next.price).toFixed(1)}`;
-    }
-    const dots=normalized.map(({point,time,price})=>`<circle cx="${x(time)}" cy="${y(price)}" r="4" fill="${s.color}"><title>${esc(s.store)} · ${new Date(point.at).toLocaleDateString('es-ES')} · ${esc(money(point.price,point.currency||currency))}</title></circle>`).join('');
-    return `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>${dots}`;
-  }).join('');
-  const startLabel=new Date(minT).toLocaleDateString('es-ES');
-  const endLabel=new Date(maxT).toLocaleDateString('es-ES');
-  const legend=series.map(s=>`<span><i style="background:${s.color}"></i>${esc(s.store)}</span>`).join('');
-  return `<div class="chart-wrap"><svg class="price-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Evolución histórica del precio por tienda">${grid}<line x1="${left}" y1="${height-bottom}" x2="${width-right}" y2="${height-bottom}" class="chart-axis-line"/><text x="${left}" y="${height-16}" class="chart-axis">${esc(startLabel)}</text><text x="${width-right}" y="${height-16}" text-anchor="end" class="chart-axis">${esc(endLabel)}</text>${lines}</svg><div class="chart-legend">${legend}</div></div>`;
+function stepPath(points,x,y){if(!points.length)return '';let path=`M ${x(points[0].time).toFixed(2)} ${y(points[0].price).toFixed(2)}`;for(const p of points.slice(1))path+=` H ${x(p.time).toFixed(2)} V ${y(p.price).toFixed(2)}`;return path;}
+function chartSvg(model,currency='EUR'){
+  const {series}=model;if(!series.length)return '<div class="spec-empty">No hay precios registrados para las tiendas y el periodo seleccionados.</div>';
+  let {minT,maxT}=model;if(minT===maxT){minT-=43200000;maxT+=43200000;}
+  const values=series.flatMap(s=>s.points.map(p=>p.price)), low=Math.min(...values),high=Math.max(...values),pad=Math.max((high-low)*.15,5),minP=Math.max(0,low-pad),maxP=high+pad;
+  const w=1000,h=330,l=85,r=30,t=25,b=52,x=v=>l+(v-minT)/(maxT-minT)*(w-l-r),y=v=>t+(maxP-v)/(maxP-minP)*(h-t-b);
+  const grid=Array.from({length:5},(_,i)=>{const v=maxP-(maxP-minP)*i/4;return `<line x1="${l}" y1="${y(v)}" x2="${w-r}" y2="${y(v)}" class="chart-grid"/><text x="${l-12}" y="${y(v)+4}" text-anchor="end" class="chart-axis">${esc(money(v,currency))}</text>`;}).join('');
+  const dates=Array.from({length:4},(_,i)=>{const tm=minT+(maxT-minT)*i/3;return `<text x="${x(tm)}" y="${h-15}" text-anchor="${i===0?'start':i===3?'end':'middle'}" class="chart-axis">${esc(date(new Date(tm).toISOString()))}</text>`;}).join('');
+  const lines=series.map(s=>`<path data-series="${esc(s.offer.id)}" d="${stepPath(s.points,x,y)}" fill="none" stroke="${storeColor(s.offer.store)}" stroke-width="2.7" stroke-linejoin="round"/>${s.points.map(p=>`<circle cx="${x(p.time)}" cy="${y(p.price)}" r="${p.kind==='carry'?0:3.5}" fill="${storeColor(s.offer.store)}"><title>${esc(storeName(s.offer.store))} · ${esc(date(p.at,true))} · ${esc(money(p.price,currency))}${p.kind==='checked'?' · última lectura correcta':''}</title></circle>`).join('')}`).join('');
+  return `<div class="chart-wrap"><svg class="price-chart" viewBox="0 0 ${w} ${h}" role="img" aria-label="Histórico de precios por tienda: tramos horizontales y cambios verticales. Consulta los valores exactos en la tabla de registros.">${grid}${dates}${lines}</svg></div><div class="chart-legend">${series.map(s=>`<span>${dot(s.offer.store)}${esc(storeName(s.offer.store))}</span>`).join('')}</div>`;
 }
-
-function openProduct(id){
-  const p=state.products.find(x=>x.id===id); if(!p) return;
-  const offers=p.offers.map(o=>`<tr><td>${esc(o.store)}</td><td>${esc(o.ean||'—')}</td><td>${money(o.price,o.currency)}</td><td>${o.original_price==null?'—':money(o.original_price,o.currency)}</td><td>${o.discount_percent==null?'—':esc(o.discount_percent)+' %'}</td><td>${esc(o.availability||'Desconocida')}</td><td><a href="${esc(o.url)}" target="_blank" rel="noopener noreferrer">Ver tienda</a></td></tr>`).join('');
-  const eans=productEans(p);
-  const points=historyPoints(p);
-  const stats=historyStats(points);
-  const currency=p.offers.find(o=>o.price!=null)?.currency||'EUR';
-  const summary=stats?`<section class="history-stats"><div><span>Mínimo histórico</span><strong>${money(stats.min,currency)}</strong></div><div><span>Máximo histórico</span><strong>${money(stats.max,currency)}</strong></div><div><span>Precio medio</span><strong>${money(stats.avg,currency)}</strong></div></section>`:'';
-  const detail=document.querySelector('#detail-content');
-  detail.innerHTML=`<section class="detail-header">${productImage(p,true)}<div><p class="brand">${esc(p.brand||'')}</p><h2>${esc(p.name)}</h2><p class="best">Mejor precio actual: <strong>${money(p.best_price,currency)}</strong></p><p class="product-ean"><strong>EAN:</strong> ${eans.length?eans.map(esc).join(' · '):'No disponible'}</p></div></section>
-    <div class="table-wrap"><table><thead><tr><th>Tienda</th><th>EAN</th><th>Precio</th><th>PVP</th><th>Descuento</th><th>Disponibilidad</th><th></th></tr></thead><tbody>${offers}</tbody></table></div>
-    <h3>Evolución del precio</h3>${summary}${chartSvg(points,currency)}
-    <details class="history-list"><summary>Ver histórico en lista (${points.length})</summary>${points.length?`<div class="history">${points.map(x=>`<div><span>${new Date(x.at).toLocaleDateString('es-ES')}</span><span>${esc(x.store)}</span><strong>${money(x.price,x.currency)}</strong></div>`).join('')}</div>`:'<p class="muted">Sin histórico público todavía.</p>'}</details>`;
-  bindImageFallback(detail);
-  document.querySelector('#detail').showModal();
+function renderOffers(p){const best=bestOffer(p.offers);return p.offers.map(o=>`<article class="offer-row ${best?.id===o.id?'best-offer':''}"><div><div class="offer-store">${dot(o.store)}${esc(storeName(o.store))}</div><p class="offer-info">${best?.id===o.id?'Mejor precio disponible · ':''}${esc(availabilityLabel(o))}</p></div><div class="offer-price">${money(o.price,o.currency)}${validPrice(o.original_price)&&validPrice(o.price)&&Number(o.original_price)>Number(o.price)?`<span class="offer-original">PVP <s>${money(o.original_price,o.currency)}</s> · −${discount(o)}%</span>`:''}</div><div class="offer-ean">EAN: ${esc(o.ean||'No publicado')}<br>Última lectura correcta: ${esc(date(o.last_successful_check||(!isError(o)?o.last_checked:null),true))}</div><span class="badge ${available(o)?'positive':'warning'}">${available(o)?'En stock':'Sin stock confirmado'}</span><div class="offer-actions"><button class="text-button" data-spec-offer="${esc(o.id)}">Ver características</button>${externalLink(o.url,'Ir a la tienda ↗')}</div></article>`).join('');}
+function renderComparison(p){
+  if(p.offers.length<2)return '';
+  const rows=comparisonRows(p.offers);if(!rows.length)return '';
+  return `<details class="comparison"><summary>Comparar características entre tiendas</summary><p>Se resaltan los valores publicados que difieren. «No publicado» indica que la tienda no aporta ese dato.</p><div class="table-wrap"><table class="comparison-table"><thead><tr><th scope="col">Característica</th>${p.offers.map(o=>`<th scope="col">${esc(storeName(o.store))}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr class="${new Set(r.values.filter(v=>v!==null).map(norm)).size>1?'different':''}"><th scope="row">${esc(r.label)}</th>${r.values.map(v=>`<td>${esc(v??'No publicado')}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>`;
 }
-
-document.querySelectorAll('#search,#store,#availability,#offer-count').forEach(el=>el.addEventListener('input',render));
-document.querySelector('#close').addEventListener('click',()=>document.querySelector('#detail').close());
-load().catch(err=>{document.querySelector('#products').innerHTML=`<p class="empty">No se pudieron cargar los datos: ${esc(err.message)}</p>`;});
+function renderSpecs(){
+  const p=state.product,o=p.offers.find(o=>String(o.id)===String(state.selectedOffer))||p.offers[0];state.selectedOffer=o.id;
+  document.querySelector('#store-tabs').innerHTML=p.offers.map(s=>`<button class="store-tab" data-spec-offer="${esc(s.id)}" aria-pressed="${s.id===o.id}">${dot(s.store)}${esc(storeName(s.store))}</button>`).join('');
+  const entries=featureEntries(o),identifiers=[['EAN',o.ean],['Referencia',o.reference],['SKU',o.sku],['Referencia del fabricante',o.manufacturer_reference]].filter(([,v])=>v);
+  document.querySelector('#spec-content').innerHTML=`<div class="spec-source"><h3>${esc(o.name||p.name)}</h3><p>Según ${esc(storeName(o.store))} · ${externalLink(o.url,'Ver ficha original ↗')}</p></div>${entries.length?`<dl class="spec-grid">${entries.map(([k,v])=>`<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`:'<p class="spec-empty">Esta tienda todavía no tiene características registradas. Puedes consultar su ficha original o elegir otra tienda.</p>'}${identifiers.length?`<details class="description"><summary>Identificadores de esta tienda</summary><dl class="spec-grid">${identifiers.map(([k,v])=>`<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></details>`:''}${o.description?`<details class="description"><summary>Descripción de ${esc(storeName(o.store))}</summary><p>${esc(o.description)}</p></details>`:'<p class="source-caption">Sin descripción registrada en esta tienda.</p>'}<p class="source-caption">Comprobación: ${esc(date(o.last_checked,true))}${isError(o)?' · Se conservan los últimos datos conocidos.':''}</p>`;
+}
+function renderChart(){
+  const p=state.product,model=chartSeries(p,state.history,state.range,state.hiddenStores),currency=p.offers.find(o=>validPrice(o.price))?.currency||'EUR';
+  const points=model.series.flatMap(s=>s.points.map(pt=>({...pt,store:s.offer.store}))),prices=points.map(p=>p.price);
+  document.querySelector('#chart-output').innerHTML=`${prices.length?`<div class="history-stats"><div><span>Mínimo del periodo</span><strong>${money(Math.min(...prices),currency)}</strong></div><div><span>Máximo del periodo</span><strong>${money(Math.max(...prices),currency)}</strong></div><div><span>Último dato mostrado</span><strong class="stat-date">${esc(date(new Date(Math.max(...points.map(p=>p.time))).toISOString()))}</strong></div></div>`:''}${chartSvg(model,currency)}`;
+  const records=points.filter(p=>p.kind!=='carry').sort((a,b)=>b.time-a.time);
+  document.querySelector('#history-records').innerHTML=`<summary>Ver registros del periodo (${records.length})</summary>${records.length?`<div class="table-wrap"><table><thead><tr><th>Fecha y hora</th><th>Tienda</th><th>Precio</th><th>Registro</th></tr></thead><tbody>${records.map(r=>`<tr><td>${esc(date(r.at,true))}</td><td>${esc(storeName(r.store))}</td><td>${money(r.price,currency)}</td><td>${r.kind==='checked'?'Última lectura correcta':'Dato registrado'}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">Sin registros en este periodo.</p>'}`;
+}
+function renderProduct(p){
+  state.product=p;state.range=0;state.hiddenStores=new Set();
+  const query=new URLSearchParams(location.hash.split('?')[1]||'');state.selectedOffer=query.get('tienda')||bestOffer(p.offers)?.id||p.offers[0].id;
+  const best=bestOffer(p.offers),source=best||p.offers[0], eans=[...new Set([p.ean,...p.offers.map(o=>o.ean)].filter(Boolean))];
+  const root=document.querySelector('#product-view');
+  root.innerHTML=`<div class="breadcrumb"><a href="${state.savedOnly?'#guardadas':'#catalogo'}">← Volver ${state.savedOnly?'a guardadas':'al catálogo'}</a><div class="detail-actions"><button class="secondary-button" id="copy-link">Copiar enlace</button>${saveButton(p)}</div></div><section class="product-hero">${productImage(p,true)}<div><p class="brand">${esc(p.brand||'Marca sin indicar')}${p.year?' / '+esc(p.year):''}</p><h1 class="product-title" tabindex="-1">${esc(p.name)}</h1><div class="feature-tags">${['shape','play','face'].map(k=>feature(source,k)).filter(Boolean).map(v=>`<span>${esc(v)}</span>`).join('')}</div><p class="source-caption">Características de ${esc(storeName(source.store))}. Consulta cada ficha más abajo.</p><p class="product-meta">${p.stores.length} tiendas asociadas · ${p.offers.length} ofertas<br>EAN: ${eans.length?eans.map(esc).join(' · '):'No publicado'}</p></div><aside class="buy-box"><div><p class="eyebrow">${best?'MEJOR PRECIO DISPONIBLE':'DISPONIBILIDAD'}</p><div class="hero-price">${best?money(best.price,best.currency):'Sin stock'}</div><p>${best?esc(storeName(best.store)):'Consulta las ofertas registradas'}</p></div>${best?externalLink(best.url,'Ver oferta ↗','primary-button'):''}<small>Sin gastos de envío. Confirma el precio final en la tienda.</small></aside></section><nav class="detail-nav" aria-label="Secciones de la pala"><a href="#ofertas" data-scroll="offers-panel">Ofertas (${p.offers.length})</a><a href="#caracteristicas" data-scroll="specs-panel">Características por tienda</a><a href="#historico" data-scroll="history-panel">Histórico de precios</a></nav><div class="detail-grid"><section class="panel" id="offers-panel"><div class="panel-heading"><div><p class="eyebrow">DÓNDE COMPRAR</p><h2>Todas las ofertas</h2><p>Precio y disponibilidad de cada web.</p></div></div><div class="offer-list">${renderOffers(p)}</div>${renderComparison(p)}</section><section class="panel" id="specs-panel"><div class="panel-heading"><div><p class="eyebrow">CONOCE TU PALA</p><h2>Su ficha, tienda a tienda</h2><p>Elige la web para ver sus características.</p></div></div><div class="store-tabs" id="store-tabs" role="group" aria-label="Tienda de la ficha técnica"></div><div id="spec-content" aria-live="polite"></div></section></div><section class="panel chart-panel" id="history-panel"><div class="panel-heading"><div><p class="eyebrow">SIGUE SU EVOLUCIÓN</p><h2>El precio, con perspectiva</h2><p>Compara el histórico registrado en cada tienda.</p></div></div><div class="chart-toolbar"><div class="segmented" role="group" aria-label="Periodo del histórico">${[[7,'7 días'],[30,'30 días'],[90,'90 días'],[0,'Todo']].map(([n,l])=>`<button data-range="${n}" aria-pressed="${n===0}">${l}</button>`).join('')}</div><div class="chart-stores">${p.stores.map(s=>`<label><input type="checkbox" data-chart-store="${esc(s)}" checked>${dot(s)}${esc(storeName(s))}</label>`).join('')}</div></div><div id="chart-output"></div><p class="chart-note">Cada precio se mantiene en horizontal hasta el siguiente cambio registrado. La línea termina en la última lectura correcta de esa tienda; no se prolonga hasta hoy si no hay datos nuevos. Los saltos verticales señalan cuándo se detectó un cambio. Las fechas se muestran en horario de Madrid.</p><details class="history-list" id="history-records"></details></section>`;
+  renderSpecs();renderChart();bindImageFallback(root);
+  root.querySelectorAll('[data-scroll]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();document.getElementById(a.dataset.scroll).scrollIntoView({behavior:'smooth'});}));
+  root.querySelector('#copy-link').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(location.href);toast('Enlace de la pala copiado');}catch{toast('Puedes copiar el enlace desde la barra de direcciones');}});
+  root.querySelector('.product-title').focus({preventScroll:true});
+}
+function populate(id,values){const select=document.getElementById(id),unique=new Map();for(const [value,label] of values)if(value&&!unique.has(value))unique.set(value,label);select.insertAdjacentHTML('beforeend',[...unique].sort((a,b)=>a[1].localeCompare(b[1],'es')).map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join(''));}
+const filterIds=['search','brand','store','availability','shape','level','play','min-price','max-price','offer-count'];
+function readFilters(){
+  const val=id=>document.getElementById(id).value,parsed=parseOfferCountFilter(val('offer-count')),min=val('min-price')===''?null:Number(val('min-price')),max=val('max-price')===''?null:Number(val('max-price'));
+  const priceError=(min!==null&&(!Number.isFinite(min)||min<0))||(max!==null&&(!Number.isFinite(max)||max<0))||(min!==null&&max!==null&&min>max);
+  document.getElementById('offer-count').setAttribute('aria-invalid',String(!parsed.valid));
+  ['min-price','max-price'].forEach(id=>document.getElementById(id).setAttribute('aria-invalid',String(priceError)));
+  document.getElementById('filter-error').textContent=!parsed.valid?'Usa un filtro de ofertas como >=2 o =3.':priceError?'Revisa el rango: el mínimo no puede superar al máximo ni ser negativo.':'';
+  return {valid:parsed.valid&&!priceError,q:norm(val('search')),brand:val('brand'),store:val('store'),availability:val('availability'),shape:val('shape'),level:val('level'),play:val('play'),min,max,count:parsed.filter};
+}
+function renderCatalog(){
+  const f=readFilters(),root=document.getElementById('products'),sort=document.getElementById('sort').value;
+  const rows=f.valid?state.products.filter(p=>!state.savedOnly||state.saved.has(p.id)).map(p=>productMatch(p,f)).filter(Boolean):[];
+  rows.sort((a,b)=>{const ap=a.best?Number(a.best.price):null,bp=b.best?Number(b.best.price):null;let result=0;
+    if(sort==='name')result=a.product.name.localeCompare(b.product.name,'es');
+    else if(sort==='compare')result=b.product.stores.length-a.product.stores.length;
+    else if(sort==='discount')result=discount(b.best)-discount(a.best);
+    else result=ap===null?bp===null?0:1:bp===null?-1:sort==='price-desc'?bp-ap:ap-bp;
+    return result||a.product.name.localeCompare(b.product.name,'es');
+  });
+  const pages=Math.max(1,Math.ceil(rows.length/state.pageSize));state.page=Math.min(state.page,pages);
+  root.innerHTML=rows.slice((state.page-1)*state.pageSize,state.page*state.pageSize).map(card).join('')||`<div class="empty"><h3>${!f.valid?'Revisa los filtros':state.savedOnly?'No hay palas guardadas con estos filtros':'No encontramos palas con estos filtros'}</h3><p>${state.savedOnly?'Pulsa el corazón de una pala para guardarla en este dispositivo.':'Prueba otra marca, amplía el precio o limpia la búsqueda.'}</p><button class="secondary-button" data-reset>Limpiar filtros</button></div>`;
+  root.setAttribute('aria-busy','false');bindImageFallback(root);
+  document.getElementById('results-title').textContent=state.savedOnly?'Tus palas guardadas':'Encuentra tu pala';
+  document.getElementById('result-count').textContent=`${rows.length.toLocaleString('es-ES')} palas · ${rows.reduce((n,r)=>n+r.offers.length,0).toLocaleString('es-ES')} ofertas coinciden`;
+  document.getElementById('pagination').innerHTML=rows.length?`<button data-page="${state.page-1}" ${state.page===1?'disabled':''}>← Anterior</button><span>Página ${state.page} de ${pages}</span><button data-page="${state.page+1}" ${state.page===pages?'disabled':''}>Siguiente →</button>`:'';
+  document.getElementById('active-filters').innerHTML=filterIds.map(id=>{const el=document.getElementById(id);return el.value?`<button class="chip" data-clear="${id}" aria-label="Quitar filtro ${esc(el.closest('label').querySelector('span').textContent)}">${esc(el.closest('label').querySelector('span').textContent)}: ${esc(el.tagName==='SELECT'?el.selectedOptions[0].textContent:el.value)} ×</button>`:'';}).join('');
+}
+function toast(message){const el=document.getElementById('toast');el.textContent=message;el.classList.add('show');clearTimeout(state.toastTimer);state.toastTimer=setTimeout(()=>el.classList.remove('show'),3500);}
+function toggleSaved(id){const was=state.saved.has(id);was?state.saved.delete(id):state.saved.add(id);let persisted=true;try{localStorage.setItem('comparatupala:saved',JSON.stringify([...state.saved]));}catch{persisted=false;}document.getElementById('saved-count').textContent=state.saved.size;document.querySelectorAll('[data-save]').forEach(el=>{if(el.dataset.save===id){const saved=state.saved.has(id),p=state.products.find(p=>p.id===id);el.setAttribute('aria-pressed',String(saved));el.setAttribute('aria-label',(saved?'Quitar de guardadas ':'Guardar ')+p.name);el.textContent=saved?'♥':'♡';}});if(state.savedOnly&&!state.product)renderCatalog();toast(persisted?(was?'Pala quitada de guardadas':'Pala guardada en este dispositivo'):'Guardada solo durante esta sesión: el navegador no permite almacenamiento');}
+function resetFilters(){document.getElementById('filters').reset();state.page=1;renderCatalog();}
+function route(){
+  const hash=location.hash,match=hash.match(/^#pala\/([^?]+)/);let p=null;
+  if(match){try{p=state.products.find(p=>p.id===decodeURIComponent(match[1]));}catch{}}
+  state.product=p;document.getElementById('catalog-view').hidden=!!p;document.getElementById('product-view').hidden=!p;
+  if(p){document.title=p.name+' — ComparaTuPala.es';renderProduct(p);window.scrollTo(0,0);}
+  else{state.savedOnly=hash==='#guardadas';document.title='ComparaTuPala.es — Explora, compara y elige';renderCatalog();if(match)toast('Esta pala ya no está en el catálogo exportado');}
+  document.getElementById('nav-catalog').classList.toggle('active',!state.savedOnly);document.getElementById('nav-saved').classList.toggle('active',state.savedOnly);
+}
+async function load(){
+  const get=async path=>{const r=await fetch(path,{cache:'no-cache'});if(!r.ok)throw new Error('No se pudo leer '+path);return r.json();};
+  const [products,history,stats]=await Promise.all(['products','history','stats'].map(n=>get('data/'+n+'.json')));
+  if(!Array.isArray(products)||!stats||typeof history!=='object')throw new Error('Formato de catálogo no válido');
+  Object.assign(state,{products,history,stats});
+  try{const saved=JSON.parse(localStorage.getItem('comparatupala:saved')||'[]');if(Array.isArray(saved))state.saved=new Set(saved.filter(id=>products.some(p=>p.id===id)));}catch{}
+  document.getElementById('saved-count').textContent=state.saved.size;
+  populate('store',stats.stores.map(s=>[s,storeName(s)]));populate('brand',products.map(p=>[norm(p.brand),p.brand||'']));
+  for(const k of ['shape','level','play'])populate(k,products.flatMap(p=>p.offers.map(o=>{const v=feature(o,k);return [norm(v),v];})));
+  document.getElementById('updated').textContent=date(stats.latest_check,true);
+  const multi=products.filter(p=>p.stores.length>1).length;
+  document.getElementById('stats').innerHTML=[[products.length,'Palas en el catálogo','↗'],[stats.offers,'Ofertas registradas','€'],[stats.stores.length,'Tiendas comparadas','⌘'],[multi,'Palas en varias tiendas','⇄']].map(([n,l,i])=>`<div class="stat"><div><strong>${Number(n).toLocaleString('es-ES')}</strong><span>${l}</span></div><div class="stat-icon" aria-hidden="true">${i}</div></div>`).join('');
+  route();
+}
+function init(){
+  document.getElementById('filter-toggle').addEventListener('click',e=>{const panel=e.currentTarget.closest('aside'),collapsed=panel.classList.toggle('mobile-collapsed');e.currentTarget.setAttribute('aria-expanded',String(!collapsed));e.currentTarget.querySelector('span').textContent=collapsed?'Marca, precio y características ＋':'Ocultar filtros −';});
+  document.querySelector('.skip-link').addEventListener('click',e=>{e.preventDefault();const el=document.querySelector(state.product?'.product-title':'#results-title');el.setAttribute('tabindex','-1');el.focus();});
+  document.getElementById('filters').addEventListener('submit',e=>e.preventDefault());
+  let timer;document.getElementById('filters').addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>{state.page=1;renderCatalog();},140);});
+  document.getElementById('sort').addEventListener('change',()=>{state.page=1;renderCatalog();});
+  document.getElementById('reset').addEventListener('click',resetFilters);
+  document.addEventListener('click',e=>{const el=e.target.closest('button');if(!el)return;
+    if(el.dataset.save)toggleSaved(el.dataset.save);
+    if(el.hasAttribute('data-reset'))resetFilters();
+    if(el.dataset.clear){document.getElementById(el.dataset.clear).value='';state.page=1;renderCatalog();}
+    if(el.dataset.page){state.page=Number(el.dataset.page);renderCatalog();document.getElementById('results-title').scrollIntoView();}
+    if(el.dataset.specOffer){const inTabs=!!el.closest('#store-tabs');state.selectedOffer=el.dataset.specOffer;renderSpecs();history.replaceState(null,'','#pala/'+encodeURIComponent(state.product.id)+'?tienda='+state.selectedOffer);if(inTabs)document.querySelector(`#store-tabs [data-spec-offer="${state.selectedOffer}"]`).focus({preventScroll:true});else document.getElementById('specs-panel').scrollIntoView();}
+    if(el.hasAttribute('data-range')){state.range=Number(el.dataset.range);document.querySelectorAll('[data-range]').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.range)===state.range)));renderChart();}
+  });
+  document.addEventListener('change',e=>{if(e.target.hasAttribute('data-chart-store')){const s=e.target.dataset.chartStore;e.target.checked?state.hiddenStores.delete(s):state.hiddenStores.add(s);renderChart();}});
+  window.addEventListener('hashchange',()=>{if(state.products.length)route();});
+  load().catch(err=>{document.getElementById('products').innerHTML=`<div class="empty"><h3>No pudimos cargar el catálogo</h3><p>${esc(err.message)}</p><button class="secondary-button" onclick="location.reload()">Reintentar</button></div>`;document.getElementById('products').setAttribute('aria-busy','false');document.getElementById('updated').textContent='Datos no disponibles';});
+}
+init();
