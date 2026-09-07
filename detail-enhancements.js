@@ -98,4 +98,11 @@
 
     root.querySelector('.product-title').focus({preventScroll:true});
   };
+
+  document.addEventListener('click', e => {
+    const button = e.target.closest('button[data-spec-offer]');
+    if (!button || button.closest('#store-tabs')) return;
+    const specsPanel = document.getElementById('specs-panel');
+    if (specsPanel instanceof HTMLDetailsElement) specsPanel.open = true;
+  }, true);
 })();
