@@ -26,7 +26,7 @@
 .decision-card-footer a{width:100%;text-align:right}
 .decision-card .card-pvp{margin-top:5px}
 
-.store-selector{display:flex;flex-wrap:wrap;gap:8px}
+.store-selector{display:flex;flex-wrap:wrap;gap:8px;min-width:0;max-width:100%}
 .store-selector-option{display:inline-flex!important;align-items:center;gap:7px!important;min-height:38px;padding:7px 10px!important;border:1px solid #d7e3da;border-radius:9px;background:white;color:var(--muted);font-size:13px;cursor:pointer;transition:border-color .15s,background .15s,color .15s}
 .store-selector-option:has(input:checked){border-color:#9bdab7;background:var(--green-soft);color:var(--green-dark)}
 .store-selector-option input{width:16px!important;height:16px!important;min-height:16px!important;margin:0!important;accent-color:var(--green-dark)}
@@ -65,6 +65,13 @@
   .detail-nav-sticky::-webkit-scrollbar{display:none}
   .detail-nav-sticky a{flex:0 0 auto}
   .store-selector{flex-wrap:nowrap;overflow-x:auto;padding-bottom:5px;scrollbar-width:thin}
+  .featured-panel .comparison-controls{width:100%;max-width:100%;min-width:0;overflow:hidden}
+  .featured-panel .comparison-toolbar{width:100%;max-width:100%;min-width:0;overflow:hidden}
+  .featured-panel .comparison-stores.store-selector{display:flex;width:100%;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding-inline:2px;padding:2px 2px 8px;margin:0;gap:8px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .featured-panel .comparison-stores.store-selector::-webkit-scrollbar{display:none}
+  .featured-panel .comparison-stores .store-selector-option{flex:0 0 auto;max-width:calc(100% - 8px);min-height:42px;scroll-snap-align:start;white-space:normal;overflow-wrap:anywhere}
+  .featured-panel .comparison-selection-status{width:100%;max-width:100%;min-width:0}
+  .featured-panel .comparison-selection-status strong{white-space:normal}
   .decision-card-footer a{text-align:left}
 }
 
@@ -73,6 +80,9 @@
   .decision-card .product-media{height:165px}
   .skeleton-media{height:155px}
   .detail-nav-sticky{gap:18px}
+  .featured-panel .comparison-controls{padding:11px}
+  .featured-panel .comparison-stores.store-selector{padding-inline:1px}
+  .featured-panel .comparison-stores .store-selector-option{max-width:calc(100% - 4px);font-size:12px;padding:7px 9px!important}
 }
 
 @media(prefers-reduced-motion:reduce){
