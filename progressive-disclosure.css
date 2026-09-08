@@ -1,6 +1,7 @@
 /* Progressive disclosure + catalog grid/list selector */
 .catalog-controls{display:flex;align-items:flex-end;justify-content:flex-end;gap:10px;margin-left:auto}
 .catalog-controls .sort{min-width:210px}
+.page-size-control{min-width:118px}
 .catalog-view-toggle{display:inline-flex;align-items:center;padding:3px;border:1px solid var(--line);border-radius:10px;background:#edf3ef;min-height:43px}
 .catalog-view-toggle button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:35px;padding:7px 10px;border:0;border-radius:7px;background:transparent;color:var(--muted);font-size:13px;font-weight:700;white-space:nowrap}
 .catalog-view-toggle button[aria-pressed="true"]{background:white;color:var(--green-dark);box-shadow:0 1px 5px rgba(17,28,24,.09)}
@@ -50,6 +51,16 @@
 .offer-more dt{color:var(--muted);font-size:11px}
 .offer-more dd{margin:0;text-align:right;font-size:11px;font-weight:650;overflow-wrap:anywhere}
 
+.offers-overflow{border:1px dashed #c8d9ce;border-radius:12px;background:#fafcfb;overflow:hidden}
+.offers-overflow>summary{display:flex;align-items:center;justify-content:center;gap:10px;min-height:50px;padding:10px 16px;list-style:none;cursor:pointer;color:var(--green-dark);font-size:13px;font-weight:750;text-align:center}
+.offers-overflow>summary::-webkit-details-marker{display:none}
+.offers-overflow>summary:hover{background:var(--green-soft)}
+.offers-overflow>summary::after{content:"+";font-size:18px;font-weight:500;line-height:1}
+.offers-overflow[open]>summary{border-bottom:1px solid #e3ece6;background:#f7faf8}
+.offers-overflow[open]>summary::after{content:"−"}
+.offers-overflow-dots{font-size:18px;letter-spacing:2px;line-height:1;color:#779184}
+.offers-overflow-list{padding:12px;background:white}
+
 .spec-section-label{margin:0 0 10px;color:var(--muted);font-size:12px;font-weight:750;text-transform:uppercase;letter-spacing:.07em}
 .spec-primary{margin-top:4px}
 .spec-more{margin-top:16px}
@@ -76,7 +87,7 @@
 
 @media(max-width:540px){
   .catalog-controls{align-items:stretch;flex-direction:column}
-  .catalog-controls .sort{width:100%;min-width:0}
+  .catalog-controls .sort,.page-size-control{width:100%;min-width:0}
   .catalog-view-toggle{align-self:flex-end}
   .catalog-view-toggle button{padding-inline:12px}
   .catalog-list-row{grid-template-columns:72px minmax(0,1fr);gap:10px}
@@ -87,6 +98,8 @@
   .offer-more dl{grid-template-columns:1fr}
   .compact-offer{grid-template-columns:1fr auto;padding:13px}
   .compact-offer .offer-actions{align-items:flex-start;flex-direction:column}
+  .offers-overflow>summary{justify-content:space-between;text-align:left}
+  .offers-overflow-list{padding:10px}
 }
 
 @media(prefers-reduced-motion:reduce){
