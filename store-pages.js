@@ -1,48 +1,129 @@
 'use strict';
 
 (() => {
-  const STORE_META = {
-    padelnuestro: {
-      id: 'padelnuestro',
-      slug: 'padelnuestro',
-      name: 'Padel Nuestro',
-      color: '#119759',
-      website: 'https://www.padelnuestro.com/',
-      description: 'Tienda especializada en pádel cuyo catálogo público es monitorizado por ComparaTuPala para comparar precios, disponibilidad y fichas de producto.',
-      active: true,
-      external_store_rating: null,
-      external_store_review_count: null,
-      external_store_rating_source: null
-    },
-    zonadepadel: {
-      id: 'zonadepadel',
-      slug: 'zonadepadel',
-      name: 'Zona de Pádel',
-      color: '#5a6cdd',
-      website: 'https://www.zonadepadel.es/',
-      description: 'Tienda especializada en material de pádel cuyo catálogo público es monitorizado por ComparaTuPala para facilitar la comparación entre tiendas.',
-      active: true,
-      external_store_rating: null,
-      external_store_review_count: null,
-      external_store_rating_source: null
-    },
-    padelmarket: {
-      id: 'padelmarket',
-      slug: 'padelmarket',
-      name: 'Padel Market',
-      color: '#d18323',
-      website: 'https://padelmarket.com/',
-      description: 'Tienda online de pádel cuyo catálogo público es monitorizado por ComparaTuPala para mostrar precios, disponibilidad y datos de producto comparables.',
-      active: true,
-      external_store_rating: null,
-      external_store_review_count: null,
-      external_store_rating_source: null
-    }
-  };
+  const legacyStores = {...stores};
+  const fallbackColors = ['#758779', '#4f6f8f', '#8a6d3b', '#6f5b8f', '#7b6660', '#4d7775'];
+  let storeMasterLoaded = false;
 
-  Object.entries(STORE_META).forEach(([slug, meta]) => {
-    stores[slug] = {...stores[slug], ...meta, href: `#tienda/${encodeURIComponent(slug)}`};
-  });
+  const dataStoreSlugs = () => [...new Set([
+    ...(Array.isArray(state.stats?.stores) ? state.stats.stores : []),
+    ...state.products.flatMap(product => Array.isArray(product.offers) ? product.offers.map(offer => offer.store) : [])
+  ].filter(Boolean))];
+
+  const fallbackStoreName = slug => String(slug || '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, letter => letter.toUpperCase());
+
+  function normalizeStore(record, index) {
+    if (!record || typeof record !== 'object') return null;
+    const slug = String(record.slug || record.id || '').trim();
+    if (!slug) return null;
+    return {
+      id: slug,
+      slug,
+      name: String(record.name || fallbackStoreName(slug)),
+      color: String(record.color || fallbackColors[index % fallbackColors.length]),
+      website: String(record.website || ''),
+      description: String(record.description || 'Tienda monitorizada por ComparaTuPala a partir de información pública.'),
+      active: record.active !== false,
+      order: Number.isFinite(Number(record.order)) ? Number(record.order) : index + 1,
+      external_store_rating: record.external_store_rating ?? null,
+      external_store_review_count: record.external_store_review_count ?? null,
+      external_store_rating_source: record.external_store_rating_source ?? null,
+      href: `#tienda/${encodeURIComponent(slug)}`
+    };
+  }
+
+  function refreshStoreFilterLabels() {
+    const select = document.getElementById('store');
+    if (!select) return;
+    [...select.options].forEach(option => {
+      if (option.value) option.textContent = storeName(option.value);
+    });
+  }
+
+  function updateStoreCountNote() {
+    const note = document.querySelector('.topbar-note');
+    if (!note) return;
+    const active = Object.values(stores).filter(store => store?.slug && store.active !== false);
+    const count = active.length || dataStoreSlugs().length;
+    note.innerHTML = `<i class="status-dot"></i> ${count.toLocaleString('es-ES')} tiendas. Una decisión.`;
+  }
+
+  function applyStoreMaster(records) {
+    const normalized = records
+      .map(normalizeStore)
+      .filter(Boolean)
+      .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name, 'es'));
+    if (!normalized.length) throw new Error('El master de tiendas está vacío');
+
+    Object.keys(stores).forEach(slug => delete stores[slug]);
+    normalized.forEach(store => {
+      stores[store.slug] = store;
+    });
+    storeMasterLoaded = true;
+    refreshStoreFilterLabels();
+    updateStoreCountNote();
+  }
+
+  function ensureLegacyStores() {
+    if (storeMasterLoaded) return;
+    Object.entries(legacyStores).forEach(([slug, meta]) => {
+      stores[slug] = {
+        id: slug,
+        slug,
+        name: meta.name || fallbackStoreName(slug),
+        color: meta.color || '#758779',
+        website: meta.website || '',
+        description: meta.description || 'Tienda monitorizada por ComparaTuPala a partir de la información pública incluida en el catálogo exportado.',
+        active: meta.active !== false,
+        external_store_rating: null,
+        external_store_review_count: null,
+        external_store_rating_source: null,
+        href: `#tienda/${encodeURIComponent(slug)}`
+      };
+    });
+    dataStoreSlugs().forEach((slug, index) => {
+      if (stores[slug]) return;
+      stores[slug] = {
+        id: slug,
+        slug,
+        name: fallbackStoreName(slug),
+        color: fallbackColors[index % fallbackColors.length],
+        website: '',
+        description: 'Tienda monitorizada por ComparaTuPala a partir de la información pública incluida en el catálogo exportado.',
+        active: true,
+        external_store_rating: null,
+        external_store_review_count: null,
+        external_store_rating_source: null,
+        href: `#tienda/${encodeURIComponent(slug)}`
+      };
+    });
+    refreshStoreFilterLabels();
+    updateStoreCountNote();
+  }
+
+  async function loadStoreMaster() {
+    try {
+      const response = await fetch('data/stores.json', {cache: 'no-cache'});
+      if (!response.ok) throw new Error(`No se pudo leer data/stores.json (${response.status})`);
+      const records = await response.json();
+      if (!Array.isArray(records)) throw new Error('Formato de stores.json no válido');
+      applyStoreMaster(records);
+    } catch (error) {
+      console.warn('No se pudo cargar el master de tiendas; se usa compatibilidad temporal.', error);
+      ensureLegacyStores();
+    }
+    if (state.loaded) route();
+  }
+
+  function ensureDataStores() {
+    if (!storeMasterLoaded) ensureLegacyStores();
+    updateStoreCountNote();
+  }
+
+  ensureLegacyStores();
+  loadStoreMaster();
 
   const style = document.createElement('link');
   style.rel = 'stylesheet';
@@ -175,6 +256,7 @@
   }
 
   function renderStoresPage() {
+    ensureDataStores();
     const root = showStoreView();
     const entries = Object.values(stores).filter(store => store?.slug && store.active !== false);
     document.title = 'Tiendas de pádel — ComparaTuPala.es';
@@ -328,6 +410,7 @@
   }
 
   function renderStorePage(slug) {
+    ensureDataStores();
     const root = showStoreView();
     const store = storeBySlug(slug);
 
@@ -423,6 +506,7 @@
   }
 
   route = function routeWithStores() {
+    ensureDataStores();
     const hash = location.hash;
     const storeMatch = hash.match(/^#tienda\/([^?]+)/);
     if (hash === '#tiendas') {
