@@ -2,6 +2,7 @@
   const STORAGE_KEY = 'comparatupala.cookieConsent.v1';
   const CONSENT_VERSION = 1;
   const MEASUREMENT_ID = 'G-BH1GN09MC9';
+  const GA_DISABLE_KEY = `ga-disable-${MEASUREMENT_ID}`;
 
   function readChoice() {
     try {
@@ -27,6 +28,32 @@
     }
   }
 
+  function clearAnalyticsCookies() {
+    const cookieNames = document.cookie
+      .split(';')
+      .map((cookie) => cookie.split('=')[0].trim())
+      .filter((name) => name === '_ga' || name.startsWith('_ga_'));
+
+    if (!cookieNames.length) return;
+
+    const hostname = window.location.hostname;
+    const parts = hostname.split('.');
+    const baseDomain = parts.length > 1 ? `.${parts.slice(-2).join('.')}` : null;
+    const domains = [null, hostname, `.${hostname}`, baseDomain].filter((value, index, list) => value && list.indexOf(value) === index);
+
+    cookieNames.forEach((name) => {
+      document.cookie = `${name}=; Max-Age=0; path=/; SameSite=Lax`;
+      domains.forEach((domain) => {
+        document.cookie = `${name}=; Max-Age=0; path=/; domain=${domain}; SameSite=Lax`;
+      });
+    });
+  }
+
+  function setAnalyticsEnabled(enabled) {
+    window[GA_DISABLE_KEY] = !enabled;
+    if (!enabled) clearAnalyticsCookies();
+  }
+
   function updateGoogleConsent(analytics) {
     if (typeof window.gtag !== 'function') return;
 
@@ -39,7 +66,11 @@
   }
 
   function loadGoogleAnalytics() {
-    if (document.querySelector(`script[data-ga4-id="${MEASUREMENT_ID}"]`)) return;
+    const existing = document.querySelector(`script[data-ga4-id="${MEASUREMENT_ID}"]`);
+    if (existing) {
+      window.gtag('config', MEASUREMENT_ID);
+      return;
+    }
 
     const script = document.createElement('script');
     script.async = true;
@@ -53,6 +84,7 @@
   }
 
   function applyChoice(analytics) {
+    setAnalyticsEnabled(analytics);
     updateGoogleConsent(analytics);
     if (analytics) loadGoogleAnalytics();
   }
@@ -186,6 +218,7 @@
     if (saved) {
       applyChoice(saved.analytics);
     } else {
+      setAnalyticsEnabled(false);
       ui.banner.hidden = false;
     }
   }
