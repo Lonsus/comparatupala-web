@@ -37,12 +37,84 @@
       external_store_rating: null,
       external_store_review_count: null,
       external_store_rating_source: null
+    },
+    tiendapadelpoint: {
+      id: 'tiendapadelpoint',
+      slug: 'tiendapadelpoint',
+      name: 'TiendaPadelPoint',
+      color: '#c95f2d',
+      website: 'https://www.tiendapadelpoint.com/',
+      description: 'Tienda online especializada en pádel cuyo catálogo público es monitorizado por ComparaTuPala para comparar precios, disponibilidad y fichas de producto.',
+      active: true,
+      external_store_rating: null,
+      external_store_review_count: null,
+      external_store_rating_source: null
+    },
+    padelmania: {
+      id: 'padelmania',
+      slug: 'padelmania',
+      name: 'Padelmania',
+      color: '#2e68a8',
+      website: 'https://padelmania.com/es/',
+      description: 'Tienda especializada en material de pádel cuyo catálogo público es monitorizado por ComparaTuPala para facilitar la comparación de ofertas y disponibilidad.',
+      active: true,
+      external_store_rating: null,
+      external_store_review_count: null,
+      external_store_rating_source: null
+    },
+    racketstore: {
+      id: 'racketstore',
+      slug: 'racketstore',
+      name: 'RacketStore',
+      color: '#78558f',
+      website: 'https://racketstore.com/',
+      description: 'Tienda online de deportes de raqueta cuyo catálogo de pádel es monitorizado por ComparaTuPala para comparar precios, disponibilidad y datos de producto.',
+      active: true,
+      external_store_rating: null,
+      external_store_review_count: null,
+      external_store_rating_source: null
     }
   };
 
   Object.entries(STORE_META).forEach(([slug, meta]) => {
     stores[slug] = {...stores[slug], ...meta, href: `#tienda/${encodeURIComponent(slug)}`};
   });
+
+  const fallbackColors = ['#758779', '#4f6f8f', '#8a6d3b', '#6f5b8f', '#7b6660', '#4d7775'];
+  const dataStoreSlugs = () => [...new Set([
+    ...(Array.isArray(state.stats?.stores) ? state.stats.stores : []),
+    ...state.products.flatMap(product => Array.isArray(product.offers) ? product.offers.map(offer => offer.store) : [])
+  ].filter(Boolean))];
+  const fallbackStoreName = slug => String(slug || '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, letter => letter.toUpperCase());
+  function updateStoreCountNote() {
+    const note = document.querySelector('.topbar-note');
+    if (!note) return;
+    const dataCount = dataStoreSlugs().length;
+    const count = dataCount || Object.values(stores).filter(store => store?.slug && store.active !== false).length;
+    note.innerHTML = `<i class="status-dot"></i> ${count.toLocaleString('es-ES')} tiendas. Una decisión.`;
+  }
+  function ensureDataStores() {
+    dataStoreSlugs().forEach((slug, index) => {
+      if (stores[slug]) return;
+      stores[slug] = {
+        id: slug,
+        slug,
+        name: fallbackStoreName(slug),
+        color: fallbackColors[index % fallbackColors.length],
+        website: '',
+        description: 'Tienda monitorizada por ComparaTuPala a partir de la información pública incluida en el catálogo exportado.',
+        active: true,
+        external_store_rating: null,
+        external_store_review_count: null,
+        external_store_rating_source: null,
+        href: `#tienda/${encodeURIComponent(slug)}`
+      };
+    });
+    updateStoreCountNote();
+  }
+  updateStoreCountNote();
 
   const style = document.createElement('link');
   style.rel = 'stylesheet';
@@ -175,6 +247,7 @@
   }
 
   function renderStoresPage() {
+    ensureDataStores();
     const root = showStoreView();
     const entries = Object.values(stores).filter(store => store?.slug && store.active !== false);
     document.title = 'Tiendas de pádel — ComparaTuPala.es';
@@ -328,6 +401,7 @@
   }
 
   function renderStorePage(slug) {
+    ensureDataStores();
     const root = showStoreView();
     const store = storeBySlug(slug);
 
@@ -423,6 +497,7 @@
   }
 
   route = function routeWithStores() {
+    ensureDataStores();
     const hash = location.hash;
     const storeMatch = hash.match(/^#tienda\/([^?]+)/);
     if (hash === '#tiendas') {
