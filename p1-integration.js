@@ -139,7 +139,7 @@
     if (!document.querySelector('link[data-progressive-disclosure]')) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'progressive-disclosure.css?v=2';
+      link.href = 'progressive-disclosure.css?v=3';
       link.dataset.progressiveDisclosure = 'true';
       document.head.appendChild(link);
     }
@@ -149,7 +149,7 @@
       return;
     }
     const script = document.createElement('script');
-    script.src = 'progressive-disclosure.js?v=2';
+    script.src = 'progressive-disclosure.js?v=3';
     script.async = false;
     script.dataset.progressiveDisclosure = 'true';
     script.addEventListener('load', () => {
