@@ -48,6 +48,35 @@
     });
   }
 
+  function storeOffersForSaving(offers, best) {
+    if (!best) return [];
+    const bestCurrency = best.currency || 'EUR';
+    const byStore = new Map();
+    (offers || []).forEach(offer => {
+      if (!offer?.store || !available(offer) || !validPrice(offer.price)) return;
+      if ((offer.currency || 'EUR') !== bestCurrency) return;
+      const previous = byStore.get(offer.store);
+      if (!previous || Number(offer.price) < Number(previous.price)) byStore.set(offer.store, offer);
+    });
+    return [...byStore.values()];
+  }
+
+  function maximumStoreSaving(row) {
+    const {best, offers} = row;
+    if (!best || !validPrice(best.price)) return null;
+    const alternatives = storeOffersForSaving(offers, best).filter(offer => offer.store !== best.store);
+    if (!alternatives.length) return null;
+    const mostExpensive = alternatives.reduce((highest, offer) => Number(offer.price) > Number(highest.price) ? offer : highest);
+    const saving = Number(mostExpensive.price) - Number(best.price);
+    return Number.isFinite(saving) && saving > 0 ? {saving, mostExpensive} : null;
+  }
+
+  function savingMarkup(row, extraClass = '') {
+    const comparison = maximumStoreSaving(row);
+    if (!comparison) return '';
+    return `<p class="card-saving${extraClass ? ` ${extraClass}` : ''}">Ahorra <strong>${money(comparison.saving, row.best.currency || 'EUR')}</strong> frente a la tienda más cara</p>`;
+  }
+
   function listCard(row) {
     const {product: p, best, offers} = row;
     const source = best || offers[0];
@@ -73,6 +102,7 @@
         <strong>${money(best?.price, best?.currency)}</strong>
         <span>${best ? dot(best.store) + esc(storeName(best.store)) : 'Consulta las tiendas'}</span>
         ${validPrice(pvp) ? `<em>PVP ${money(pvp, pvpSource?.currency || best?.currency)}</em>` : ''}
+        ${savingMarkup(row, 'catalog-list-saving')}
       </div>
       <div class="catalog-list-action"><a href="${href}">Comparar →</a></div>
     </article>`;
@@ -81,7 +111,10 @@
   const gridCard = card;
   card = function cardWithView(row) {
     if (state.catalogView === LIST) return listCard(row);
-    return gridCard(row).replace(/<p class="card-saving">[\s\S]*?<\/p>/, '');
+    let html = gridCard(row).replace(/<p class="card-saving">[\s\S]*?<\/p>/, '');
+    const saving = savingMarkup(row);
+    if (saving) html = html.replace('<p class="card-compare-meta">', `${saving}<p class="card-compare-meta">`);
+    return html;
   };
 
   const baseRenderCatalog = renderCatalog;
