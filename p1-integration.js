@@ -135,6 +135,15 @@
     select.value = String(state.pageSize);
   }
 
+  function loadComparisonBulkActions() {
+    if (document.querySelector('script[data-comparison-bulk-actions]')) return;
+    const bulkScript = document.createElement('script');
+    bulkScript.src = 'comparison-bulk-actions.js?v=1';
+    bulkScript.async = false;
+    bulkScript.dataset.comparisonBulkActions = 'true';
+    document.body.appendChild(bulkScript);
+  }
+
   function loadProgressiveDisclosure() {
     if (!document.querySelector('link[data-progressive-disclosure]')) {
       const link = document.createElement('link');
@@ -146,6 +155,7 @@
 
     if (document.querySelector('script[data-progressive-disclosure]')) {
       setupPageSizePreference();
+      loadComparisonBulkActions();
       return;
     }
     const script = document.createElement('script');
@@ -154,9 +164,11 @@
     script.dataset.progressiveDisclosure = 'true';
     script.addEventListener('load', () => {
       setupPageSizePreference();
-      if (!state.loaded) return;
-      if (state.product) renderProduct(state.product);
-      else renderCatalog();
+      if (state.loaded) {
+        if (state.product) renderProduct(state.product);
+        else renderCatalog();
+      }
+      loadComparisonBulkActions();
     });
     document.body.appendChild(script);
   }
