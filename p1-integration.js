@@ -97,14 +97,14 @@
     if (!document.querySelector('link[data-progressive-disclosure]')) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'progressive-disclosure.css?v=1';
+      link.href = 'progressive-disclosure.css?v=2';
       link.dataset.progressiveDisclosure = 'true';
       document.head.appendChild(link);
     }
 
     if (document.querySelector('script[data-progressive-disclosure]')) return;
     const script = document.createElement('script');
-    script.src = 'progressive-disclosure.js?v=1';
+    script.src = 'progressive-disclosure.js?v=2';
     script.async = false;
     script.dataset.progressiveDisclosure = 'true';
     script.addEventListener('load', () => {
