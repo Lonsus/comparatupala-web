@@ -14,23 +14,131 @@
       <div class="panel-content">${body}</div>
     </details>`;
 
-  renderComparison = function renderComparisonEnhanced(p) {
-    if (p.offers.length < 2) {
-      return '<p class="spec-empty">La comparación entre tiendas aparecerá cuando esta pala tenga ofertas de al menos dos tiendas.</p>';
+  const comparisonOfferScore = offer => {
+    const featureCount = featureEntries(offer).length;
+    const healthy = offer.active !== false && !isError(offer) ? 1 : 0;
+    const checked = timestamp(offer.last_successful_check || offer.last_checked);
+    return {featureCount, healthy, checked: Number.isFinite(checked) ? checked : 0};
+  };
+
+  const comparisonOffersByStore = product => {
+    const orderedStores = [...new Set([
+      ...(Array.isArray(product.stores) ? product.stores : []),
+      ...(Array.isArray(product.offers) ? product.offers.map(offer => offer.store) : [])
+    ].filter(Boolean))];
+    const grouped = new Map(orderedStores.map(store => [store, []]));
+
+    (product.offers || []).forEach(offer => {
+      if (!offer?.store) return;
+      if (!grouped.has(offer.store)) grouped.set(offer.store, []);
+      grouped.get(offer.store).push(offer);
+    });
+
+    return [...grouped.entries()].map(([, offers]) => offers
+      .slice()
+      .sort((a, b) => {
+        const left = comparisonOfferScore(a);
+        const right = comparisonOfferScore(b);
+        return right.featureCount - left.featureCount
+          || right.healthy - left.healthy
+          || right.checked - left.checked;
+      })[0])
+      .filter(Boolean);
+  };
+
+  const rowIsDifferent = row => new Set(row.values.filter(value => value !== null).map(norm)).size > 1;
+
+  const comparisonContent = product => {
+    const allOffers = comparisonOffersByStore(product);
+    if (allOffers.length < 2) {
+      return '<p class="spec-empty">La comparación entre tiendas aparecerá cuando esta pala tenga ofertas de al menos dos tiendas diferentes.</p>';
     }
 
-    const rows = comparisonRows(p.offers);
+    if (!(state.comparisonStores instanceof Set)) {
+      state.comparisonStores = new Set(allOffers.map(offer => offer.store));
+    }
+
+    const validStores = new Set(allOffers.map(offer => offer.store));
+    state.comparisonStores = new Set([...state.comparisonStores].filter(store => validStores.has(store)));
+    const selectedOffers = allOffers.filter(offer => state.comparisonStores.has(offer.store));
+    const selectedCount = selectedOffers.length;
+    const totalCount = allOffers.length;
+    const onlyDifferences = state.comparisonDifferencesOnly === true;
+    const rows = selectedCount >= 2 ? comparisonRows(selectedOffers) : [];
+    const visibleRows = onlyDifferences ? rows.filter(rowIsDifferent) : rows;
+
+    const controls = `<div class="comparison-controls">
+      <div class="comparison-toolbar">
+        <div class="chart-stores comparison-stores" role="group" aria-label="Tiendas incluidas en la comparación">
+          ${allOffers.map(offer => `<label><input type="checkbox" data-comparison-store="${esc(offer.store)}" ${state.comparisonStores.has(offer.store) ? 'checked' : ''}>${dot(offer.store)}${esc(storeName(offer.store))}</label>`).join('')}
+        </div>
+        <label class="comparison-difference-toggle"><input type="checkbox" data-comparison-differences ${onlyDifferences ? 'checked' : ''}><span>Solo diferencias</span></label>
+      </div>
+      <div class="comparison-selection-status"><span>Selecciona las tiendas que quieres comparar.</span><strong>${selectedCount} de ${totalCount} tiendas seleccionadas</strong></div>
+    </div>`;
+
+    if (selectedCount < 2) {
+      return `${controls}<p class="spec-empty comparison-empty">Selecciona al menos dos tiendas para comparar sus características.</p>`;
+    }
+
     if (!rows.length) {
-      return '<p class="spec-empty">Las tiendas todavía no han publicado suficientes características comparables para esta pala.</p>';
+      return `${controls}<p class="spec-empty comparison-empty">Las tiendas seleccionadas todavía no han publicado suficientes características comparables para esta pala.</p>`;
     }
 
-    return `<div class="comparison-intro"><p>Compara de un vistazo cómo describe cada tienda la misma pala. Se resaltan los valores publicados que difieren.</p><span class="comparison-badge">${new Set(p.offers.map(o=>o.store)).size} tiendas comparadas</span></div><p class="scroll-hint">Desliza la tabla para consultar todas las tiendas. Con teclado, usa las flechas al enfocar la tabla.</p><div class="table-wrap" tabindex="0" role="region" aria-label="Características comparadas por tienda"><table class="comparison-table"><thead><tr><th scope="col">Característica</th>${p.offers.map(o=>`<th scope="col">${esc(storeName(o.store))}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr class="${new Set(r.values.filter(v=>v!==null).map(norm)).size>1?'different':''}"><th scope="row">${esc(r.label)}</th>${r.values.map(v=>`<td>${esc(v??'No publicado')}</td>`).join('')}</tr>`).join('')}</tbody></table></div><p class="source-caption">«No publicado» indica que esa tienda no aporta el dato en su ficha.</p>`;
+    if (!visibleRows.length) {
+      return `${controls}<p class="spec-empty comparison-empty">No hay diferencias publicadas entre las tiendas seleccionadas.</p>`;
+    }
+
+    return `${controls}<p class="scroll-hint">Desliza la tabla para consultar todas las tiendas. Con teclado, usa las flechas al enfocar la tabla.</p><div class="table-wrap" tabindex="0" role="region" aria-label="Características comparadas por tienda"><table class="comparison-table"><thead><tr><th scope="col">Característica</th>${selectedOffers.map(offer=>`<th scope="col">${esc(storeName(offer.store))}</th>`).join('')}</tr></thead><tbody>${visibleRows.map(row=>`<tr class="${rowIsDifferent(row)?'different':''}"><th scope="row">${esc(row.label)}</th>${row.values.map(value=>`<td>${esc(value??'No publicado')}</td>`).join('')}</tr>`).join('')}</tbody></table></div><p class="source-caption">«No publicado» indica que esa tienda no aporta el dato en su ficha.</p>`;
+  };
+
+  const refreshComparison = focusTarget => {
+    const host = document.getElementById('comparison-content');
+    if (!host || !state.product) return;
+    host.innerHTML = comparisonContent(state.product);
+
+    if (!focusTarget) return;
+    if (focusTarget.type === 'store') {
+      [...host.querySelectorAll('[data-comparison-store]')]
+        .find(input => input.dataset.comparisonStore === focusTarget.value)
+        ?.focus({preventScroll: true});
+    } else if (focusTarget.type === 'differences') {
+      host.querySelector('[data-comparison-differences]')?.focus({preventScroll: true});
+    }
+  };
+
+  renderComparison = function renderComparisonEnhanced(product) {
+    return `<div id="comparison-content" aria-live="polite">${comparisonContent(product)}</div>`;
+  };
+
+  renderOffers = function renderOffersEnhanced(product) {
+    const best = bestOffer(product.offers);
+    const bestCurrency = best?.currency || 'EUR';
+
+    return product.offers.map(offer => {
+      const offerCurrency = offer.currency || 'EUR';
+      const delta = best
+        && offer.id !== best.id
+        && offerCurrency === bestCurrency
+        && validPrice(offer.price)
+        && validPrice(best.price)
+        ? Number(offer.price) - Number(best.price)
+        : null;
+      const deltaMarkup = Number.isFinite(delta) && delta > 0
+        ? `<span class="offer-delta">+${money(delta, offerCurrency)} frente al mejor precio</span>`
+        : '';
+
+      return `<article class="offer-row ${best?.id===offer.id?'best-offer':''}"><div class="offer-store-block"><div class="offer-store">${dot(offer.store)}${storeLabel(offer.store)}</div>${renderExternalRating(offer)}<p class="offer-info">${best?.id===offer.id?'Mejor precio disponible · ':''}${esc(availabilityLabel(offer))}</p></div><div class="offer-price">${money(offer.price,offer.currency)}${validPrice(offer.original_price)&&validPrice(offer.price)&&Number(offer.original_price)>Number(offer.price)?`<span class="offer-original">PVP <s>${money(offer.original_price,offer.currency)}</s> · −${discount(offer)}%</span>`:''}${deltaMarkup}</div><div class="offer-ean">EAN: ${esc(offer.ean||'No publicado')}<br>Última lectura correcta: ${esc(date(offer.last_successful_check||(!isError(offer)?offer.last_checked:null),true))}</div><span class="badge ${available(offer)?'positive':'warning'}">${available(offer)?'En stock':'Sin stock confirmado'}</span><div class="offer-actions"><button class="text-button" data-spec-offer="${esc(offer.id)}">Ver características</button>${externalLink(offer.url,'Ir a la tienda ↗')}</div></article>`;
+    }).join('');
   };
 
   renderProduct = function renderProductEnhanced(p) {
     state.product = p;
     state.range = 0;
     state.hiddenStores = new Set();
+    const comparisonOffers = comparisonOffersByStore(p);
+    state.comparisonStores = new Set(comparisonOffers.map(offer => offer.store));
+    state.comparisonDifferencesOnly = false;
 
     const query = new URLSearchParams(location.hash.split('?')[1] || '');
     state.selectedOffer = query.get('tienda') || bestOffer(p.offers)?.id || p.offers[0].id;
@@ -61,10 +169,10 @@
       id: 'comparison-panel',
       eyebrow: 'COMPARA ANTES DE ELEGIR',
       title: 'Comparar características entre tiendas',
-      description: 'Detecta diferencias entre las fichas publicadas por cada tienda.',
+      description: 'Selecciona las tiendas y detecta diferencias entre sus fichas publicadas.',
       body: renderComparison(p),
       className: 'comparison-panel featured-panel',
-      open: p.offers.length > 1
+      open: comparisonOffers.length > 1
     });
 
     const historyPanel = renderPanel({
@@ -100,6 +208,24 @@
 
     root.querySelector('.product-title').focus({preventScroll:true});
   };
+
+  document.addEventListener('change', event => {
+    const storeInput = event.target.closest('input[data-comparison-store]');
+    if (storeInput && state.product) {
+      const store = storeInput.dataset.comparisonStore;
+      if (!(state.comparisonStores instanceof Set)) state.comparisonStores = new Set();
+      if (storeInput.checked) state.comparisonStores.add(store);
+      else state.comparisonStores.delete(store);
+      refreshComparison({type: 'store', value: store});
+      return;
+    }
+
+    const differenceInput = event.target.closest('input[data-comparison-differences]');
+    if (differenceInput && state.product) {
+      state.comparisonDifferencesOnly = differenceInput.checked;
+      refreshComparison({type: 'differences'});
+    }
+  });
 
   document.addEventListener('click', e => {
     const button = e.target.closest('button[data-spec-offer]');
