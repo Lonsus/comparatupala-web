@@ -135,43 +135,69 @@
     document.querySelector(`[data-catalog-view="${next}"]`)?.focus({preventScroll: true});
   });
 
+  function offerPriority(offer) {
+    if (available(offer) && validPrice(offer.price)) return 0;
+    if (validPrice(offer.price)) return 1;
+    return 2;
+  }
+
+  function sortOffersForDisplay(offers) {
+    return (offers || []).slice().sort((left, right) => {
+      const priority = offerPriority(left) - offerPriority(right);
+      if (priority) return priority;
+      const leftPrice = validPrice(left.price) ? Number(left.price) : Number.POSITIVE_INFINITY;
+      const rightPrice = validPrice(right.price) ? Number(right.price) : Number.POSITIVE_INFINITY;
+      if (leftPrice !== rightPrice) return leftPrice - rightPrice;
+      return storeName(left.store).localeCompare(storeName(right.store), 'es');
+    });
+  }
+
+  function compactOfferMarkup(offer, best, bestCurrency) {
+    const offerCurrency = offer.currency || 'EUR';
+    const delta = best
+      && offer.id !== best.id
+      && offerCurrency === bestCurrency
+      && validPrice(offer.price)
+      && validPrice(best.price)
+      ? Number(offer.price) - Number(best.price)
+      : null;
+    const detailRows = [];
+    if (validPrice(offer.original_price)) detailRows.push(['PVP', money(offer.original_price, offerCurrency)]);
+    if (discount(offer)) detailRows.push(['Descuento', `−${discount(offer)}%`]);
+    if (Number.isFinite(delta) && delta > 0) detailRows.push(['Frente al mejor precio', `+${money(delta, offerCurrency)}`]);
+    detailRows.push(['EAN', esc(offer.ean || 'No publicado')]);
+    detailRows.push(['Última lectura correcta', esc(date(offer.last_successful_check || (!isError(offer) ? offer.last_checked : null), true))]);
+
+    return `<article class="offer-row compact-offer ${best?.id === offer.id ? 'best-offer' : ''}">
+      <div class="offer-store-block">
+        <div class="offer-store">${dot(offer.store)}${storeLabel(offer.store)}</div>
+        ${renderExternalRating(offer)}
+        <p class="offer-info">${best?.id === offer.id ? 'Mejor precio disponible · ' : ''}${esc(availabilityLabel(offer))}</p>
+      </div>
+      <div class="offer-price">${money(offer.price, offer.currency)}</div>
+      <div class="offer-actions">
+        <button class="text-button" data-spec-offer="${esc(offer.id)}">Ver características</button>
+        ${externalLink(offer.url, 'Ir a la tienda ↗')}
+      </div>
+      <details class="offer-more">
+        <summary>Más detalles</summary>
+        <dl>${detailRows.map(([label, value]) => `<div><dt>${label}</dt><dd>${value}</dd></div>`).join('')}</dl>
+      </details>
+    </article>`;
+  }
+
   function renderCompactOffers(product) {
     const best = bestOffer(product.offers);
     const bestCurrency = best?.currency || 'EUR';
+    const ordered = sortOffersForDisplay(product.offers);
+    const visible = ordered.slice(0, 3);
+    const remaining = ordered.slice(3);
+    const visibleMarkup = visible.map(offer => compactOfferMarkup(offer, best, bestCurrency)).join('');
 
-    return product.offers.map(offer => {
-      const offerCurrency = offer.currency || 'EUR';
-      const delta = best
-        && offer.id !== best.id
-        && offerCurrency === bestCurrency
-        && validPrice(offer.price)
-        && validPrice(best.price)
-        ? Number(offer.price) - Number(best.price)
-        : null;
-      const detailRows = [];
-      if (validPrice(offer.original_price)) detailRows.push(['PVP', money(offer.original_price, offerCurrency)]);
-      if (discount(offer)) detailRows.push(['Descuento', `−${discount(offer)}%`]);
-      if (Number.isFinite(delta) && delta > 0) detailRows.push(['Frente al mejor precio', `+${money(delta, offerCurrency)}`]);
-      detailRows.push(['EAN', esc(offer.ean || 'No publicado')]);
-      detailRows.push(['Última lectura correcta', esc(date(offer.last_successful_check || (!isError(offer) ? offer.last_checked : null), true))]);
+    if (!remaining.length) return visibleMarkup;
 
-      return `<article class="offer-row compact-offer ${best?.id === offer.id ? 'best-offer' : ''}">
-        <div class="offer-store-block">
-          <div class="offer-store">${dot(offer.store)}${storeLabel(offer.store)}</div>
-          ${renderExternalRating(offer)}
-          <p class="offer-info">${best?.id === offer.id ? 'Mejor precio disponible · ' : ''}${esc(availabilityLabel(offer))}</p>
-        </div>
-        <div class="offer-price">${money(offer.price, offer.currency)}</div>
-        <div class="offer-actions">
-          <button class="text-button" data-spec-offer="${esc(offer.id)}">Ver características</button>
-          ${externalLink(offer.url, 'Ir a la tienda ↗')}
-        </div>
-        <details class="offer-more">
-          <summary>Más detalles</summary>
-          <dl>${detailRows.map(([label, value]) => `<div><dt>${label}</dt><dd>${value}</dd></div>`).join('')}</dl>
-        </details>
-      </article>`;
-    }).join('');
+    const remainingLabel = `${remaining.length} oferta${remaining.length === 1 ? '' : 's'} más`;
+    return `${visibleMarkup}<details class="offers-overflow"><summary><span class="offers-overflow-dots" aria-hidden="true">•••</span><span>Mostrar ${remainingLabel}</span></summary><div class="offer-list offers-overflow-list">${remaining.map(offer => compactOfferMarkup(offer, best, bestCurrency)).join('')}</div></details>`;
   }
 
   renderOffers = renderCompactOffers;
