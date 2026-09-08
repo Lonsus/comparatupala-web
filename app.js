@@ -75,8 +75,26 @@ function productMatch(p,f){
   });
   return eligible.length?{product:p,offers:eligible,best:bestOffer(eligible)}:null;
 }
-function productImage(p,detail=false){const url=safeUrl(p.image_url);return `<div class="product-media ${detail?'detail-media':''} ${url?'':'is-missing'}">${url?`<img src="${esc(url)}" alt="${esc(p.name)}" loading="lazy">`:''}<span>Imagen no disponible</span></div>`;}
-function bindImageFallback(root){root.querySelectorAll('.product-media img').forEach(img=>{const fail=()=>{img.parentElement.classList.add('is-missing');img.remove();};img.addEventListener('error',fail,{once:true});if(img.complete&&!img.naturalWidth)fail();});}
+function productImage(p,detail=false){
+  const offers=p.offers||[];
+  const urls=[...new Set([p.image_url,...offers.filter(o=>o.active!==false).map(o=>o.image_url),...offers.filter(o=>o.active===false).map(o=>o.image_url)].map(safeUrl).filter(Boolean))];
+  return `<div class="product-media ${detail?'detail-media':''} ${urls.length?'':'is-missing'}">${urls.length?`<img src="${esc(urls[0])}" data-image-fallbacks="${esc(JSON.stringify(urls.slice(1)))}" alt="${esc(p.name)}" loading="lazy">`:''}<span>Imagen no disponible</span></div>`;
+}
+function bindImageFallback(root){
+  root.querySelectorAll('.product-media img').forEach(img=>{
+    if(img.dataset.imageFallbackBound)return;
+    img.dataset.imageFallbackBound='true';
+    const remaining=JSON.parse(img.dataset.imageFallbacks||'[]');
+    const fail=()=>{
+      if(remaining.length){img.src=remaining.shift();return;}
+      img.removeEventListener('error',fail);
+      img.parentElement.classList.add('is-missing');
+      img.remove();
+    };
+    img.addEventListener('error',fail);
+    if(img.complete&&!img.naturalWidth)fail();
+  });
+}
 const saveButton = p => `<button type="button" class="save-button" data-save="${esc(p.id)}" aria-pressed="${state.saved.has(p.id)}" aria-label="${state.saved.has(p.id)?'Quitar de guardadas':'Guardar'} ${esc(p.name)}" title="Guardar en este dispositivo">${state.saved.has(p.id)?'♥':'♡'}</button>`;
 function card(row){
   const {product:p,best,offers}=row, source=best||offers[0], specs=['shape','play','face'].map(k=>feature(source,k)).filter(Boolean), d=discount(best);
