@@ -91,3 +91,30 @@
     updateActiveSection();
   });
 })();
+
+(() => {
+  function loadProgressiveDisclosure() {
+    if (!document.querySelector('link[data-progressive-disclosure]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'progressive-disclosure.css?v=1';
+      link.dataset.progressiveDisclosure = 'true';
+      document.head.appendChild(link);
+    }
+
+    if (document.querySelector('script[data-progressive-disclosure]')) return;
+    const script = document.createElement('script');
+    script.src = 'progressive-disclosure.js?v=1';
+    script.async = false;
+    script.dataset.progressiveDisclosure = 'true';
+    script.addEventListener('load', () => {
+      if (!state.loaded) return;
+      if (state.product) renderProduct(state.product);
+      else renderCatalog();
+    });
+    document.body.appendChild(script);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', loadProgressiveDisclosure, {once: true});
+  else loadProgressiveDisclosure();
+})();
