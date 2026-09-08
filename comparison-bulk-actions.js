@@ -4,6 +4,7 @@
   const STYLE_ID = 'comparison-bulk-actions-style';
   let comparisonObserver = null;
   let productObserver = null;
+  let observedHost = null;
 
   function ensureStyles() {
     if (document.getElementById(STYLE_ID)) return;
@@ -54,7 +55,12 @@
 
   function observeComparisonHost() {
     const host = document.getElementById('comparison-content');
+    if (host === observedHost) {
+      ensureActions();
+      return;
+    }
     comparisonObserver?.disconnect();
+    observedHost = host || null;
     if (!host) return;
     ensureActions();
     comparisonObserver = new MutationObserver(() => ensureActions());
@@ -77,7 +83,7 @@
     }
 
     requestAnimationFrame(() => {
-      ensureActions();
+      observeComparisonHost();
       document.querySelector(`[data-comparison-bulk="${mode}"]`)?.focus({preventScroll: true});
     });
   }
@@ -92,11 +98,7 @@
     productObserver?.disconnect();
     const root = document.getElementById('product-view');
     if (!root) return;
-    productObserver = new MutationObserver(() => {
-      const currentHost = document.getElementById('comparison-content');
-      if (currentHost && currentHost !== comparisonObserver?.target) observeComparisonHost();
-      else ensureActions();
-    });
+    productObserver = new MutationObserver(() => observeComparisonHost());
     productObserver.observe(root, {childList: true, subtree: true});
   }
 
