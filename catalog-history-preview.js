@@ -23,26 +23,26 @@
       .catalog-history-stat strong{display:block;color:#fff;font-size:clamp(15px,1.6vw,20px);line-height:1.15;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
       .catalog-history-link{display:inline-flex;justify-content:center;align-items:center;gap:6px;justify-self:center;color:#7cebae;font-size:12px;font-weight:750}
       .catalog-history-link:hover{color:#a5f4c7}
-      .catalog-history-trigger{position:absolute;z-index:6;right:10px;bottom:10px;display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:6px 9px;border:1px solid #c7d9ce;border-radius:999px;background:#fff;color:var(--green-dark);font-size:11px;font-weight:750;box-shadow:0 3px 12px rgba(17,28,24,.1);opacity:0;transform:translateY(4px);pointer-events:none;transition:opacity .15s ease,transform .15s ease}
-      .catalog-history-card:hover>.catalog-history-trigger,.catalog-history-trigger:focus-visible{opacity:1;transform:none;pointer-events:auto}
+      .catalog-history-trigger{position:absolute;z-index:6;right:12px;top:56px;display:inline-grid;place-items:center;width:36px;height:36px;min-height:36px;padding:0;border:1px solid #c7d9ce;border-radius:50%;background:#fff;color:var(--green-dark);box-shadow:0 3px 12px rgba(17,28,24,.1);opacity:1;transform:none;pointer-events:auto;transition:background .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease}
+      .catalog-history-trigger svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+      .catalog-history-trigger:hover,.catalog-history-trigger:focus-visible,.catalog-history-card.history-preview-open>.catalog-history-trigger{background:var(--green-soft);border-color:#a9dfc0;color:#08683f;box-shadow:0 5px 16px rgba(17,79,48,.14)}
       .catalog-history-card.history-preview-open>.catalog-history-overlay{opacity:1;visibility:visible;pointer-events:auto}
-      .catalog-history-card.history-preview-open>.catalog-history-trigger{opacity:0;pointer-events:none}
       .catalog-history-card .save-button{z-index:7}
+      .catalog-list-row>.catalog-history-trigger{right:16px;top:53px}
       .catalog-list-row .catalog-history-overlay{padding:12px 18px}
       .catalog-list-row .catalog-history-overlay-inner{grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;text-align:left}
       .catalog-list-row .catalog-history-heading{min-width:150px}
       .catalog-list-row .catalog-history-stats{gap:7px}
       .catalog-list-row .catalog-history-link{white-space:nowrap}
       .history-stats.history-stats-with-average{grid-template-columns:repeat(4,minmax(0,1fr))}
-      @media(hover:none),(pointer:coarse){
-        .catalog-history-trigger{top:10px;right:48px;bottom:auto;opacity:1;transform:none;pointer-events:auto}
-      }
       @media(max-width:800px){
         .catalog-list-row .catalog-history-overlay-inner{grid-template-columns:1fr;gap:10px;text-align:center}
         .catalog-list-row .catalog-history-heading{min-width:0}
         .catalog-history-overlay{padding:14px}
         .catalog-history-stat{padding:8px 5px}
         .catalog-history-stat strong{font-size:16px}
+        .catalog-history-trigger,.catalog-list-row>.catalog-history-trigger{right:12px;top:50px;width:31px;height:31px;min-height:31px}
+        .catalog-history-trigger svg{width:16px;height:16px}
         .history-stats.history-stats-with-average{grid-template-columns:repeat(2,minmax(0,1fr))}
         .history-stats.history-stats-with-average>div:last-child{grid-column:auto}
       }
@@ -56,7 +56,8 @@
         .catalog-history-stat span{font-size:9px}
         .catalog-history-stat strong{font-size:13px}
         .catalog-history-link{font-size:11px}
-        .catalog-history-trigger{min-height:29px;padding:5px 8px;font-size:10px}
+        .catalog-history-trigger,.catalog-list-row>.catalog-history-trigger{right:12px;top:49px;width:30px;height:30px;min-height:30px}
+        .catalog-history-trigger svg{width:15px;height:15px}
       }
       @media(prefers-reduced-motion:reduce){.catalog-history-overlay,.catalog-history-trigger{transition:none}}
     `;
@@ -139,7 +140,7 @@
         </div>
         <a class="catalog-history-link" href="${href}" tabindex="-1">Ver histórico →</a>
       </div>
-    </div><button type="button" class="catalog-history-trigger" data-history-preview-toggle aria-expanded="false" aria-label="Mostrar resumen histórico de ${esc(product.name)}">Histórico</button>`;
+    </div><button type="button" class="catalog-history-trigger" data-history-preview-toggle aria-expanded="false" aria-label="Mostrar histórico de precios de ${esc(product.name)}" title="Histórico de precios"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></button>`;
   }
 
   function enhanceCards() {
@@ -154,16 +155,28 @@
       if (!stats || !Number.isFinite(stats.average)) return;
       card.classList.add('catalog-history-card');
       card.insertAdjacentHTML('beforeend', overlayMarkup(product, stats));
-      let hoverTimer = null;
-      card.addEventListener('pointerenter', () => {
-        if (!matchMedia('(hover:hover) and (pointer:fine)').matches) return;
-        clearTimeout(hoverTimer);
-        hoverTimer = setTimeout(() => syncOverlayAria(card, true), 140);
+
+      const trigger = card.querySelector('[data-history-preview-toggle]');
+      let closeTimer = null;
+      const usesFinePointer = () => matchMedia('(hover:hover) and (pointer:fine)').matches;
+      const openPreview = () => {
+        clearTimeout(closeTimer);
+        closePreviews(card);
+        syncOverlayAria(card, true);
+      };
+
+      trigger?.addEventListener('pointerenter', () => {
+        if (usesFinePointer()) openPreview();
       });
+      trigger?.addEventListener('focus', openPreview);
+      card.addEventListener('pointerenter', () => clearTimeout(closeTimer));
       card.addEventListener('pointerleave', () => {
-        if (!matchMedia('(hover:hover) and (pointer:fine)').matches) return;
-        clearTimeout(hoverTimer);
-        syncOverlayAria(card, false);
+        if (!usesFinePointer()) return;
+        clearTimeout(closeTimer);
+        closeTimer = setTimeout(() => syncOverlayAria(card, false), 80);
+      });
+      card.addEventListener('focusout', event => {
+        if (!card.contains(event.relatedTarget)) syncOverlayAria(card, false);
       });
     });
   }
@@ -230,7 +243,8 @@
       event.stopPropagation();
       const card = toggle.closest('.catalog-history-card');
       if (!card) return;
-      const open = !card.classList.contains('history-preview-open');
+      const finePointer = matchMedia('(hover:hover) and (pointer:fine)').matches;
+      const open = finePointer ? true : !card.classList.contains('history-preview-open');
       closePreviews(card);
       syncOverlayAria(card, open);
       return;
