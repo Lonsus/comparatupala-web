@@ -168,7 +168,9 @@
       trigger?.addEventListener('pointerenter', () => {
         if (usesFinePointer()) openPreview();
       });
-      trigger?.addEventListener('focus', openPreview);
+      trigger?.addEventListener('focus', () => {
+        if (usesFinePointer()) openPreview();
+      });
       card.addEventListener('pointerenter', () => clearTimeout(closeTimer));
       card.addEventListener('pointerleave', () => {
         if (!usesFinePointer()) return;
@@ -256,9 +258,7 @@
     if (event.key !== 'Escape') return;
     const open = document.querySelector('.catalog-history-card.history-preview-open');
     if (!open) return;
-    const trigger = open.querySelector('[data-history-preview-toggle]');
     syncOverlayAria(open, false);
-    trigger?.focus({preventScroll: true});
   });
 
   window.addEventListener('hashchange', () => {
