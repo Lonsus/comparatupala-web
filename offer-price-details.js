@@ -116,18 +116,20 @@
         restoredLabels.add('Descuento');
       }
 
-      if (isBestStoreOffer(offer, context) && Number.isFinite(context.bestSaving) && context.bestSaving > 0) {
+      if (isBestStoreOffer(offer, context)) {
         row.classList.add('best-offer');
         const info = row.querySelector('.offer-info');
         if (info && !info.textContent.includes('Mejor precio disponible')) {
           info.textContent = `Mejor precio disponible · ${info.textContent}`;
         }
 
-        const savingElement = document.createElement('span');
-        savingElement.className = 'offer-saving-vs-max';
-        savingElement.textContent = `Ahorras ${money(context.bestSaving, bestCurrency)} frente a la tienda más cara`;
-        priceBlock.appendChild(savingElement);
-        restoredLabels.add('Ahorro frente a la tienda más cara');
+        if (Number.isFinite(context.bestSaving) && context.bestSaving > 0) {
+          const savingElement = document.createElement('span');
+          savingElement.className = 'offer-saving-vs-max';
+          savingElement.textContent = `Ahorras ${money(context.bestSaving, bestCurrency)} frente a la tienda más cara`;
+          priceBlock.appendChild(savingElement);
+          restoredLabels.add('Ahorro frente a la tienda más cara');
+        }
       }
 
       const delta = best
