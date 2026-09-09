@@ -6,6 +6,7 @@
   const GRID = 'grid';
   const LIST = 'list';
   const primarySpecKeys = ['shape', 'level', 'play', 'balance', 'weight', 'face'];
+  const priceCents = value => Math.round(Number(value) * 100);
 
   function loadCatalogView() {
     try {
@@ -71,10 +72,34 @@
     return Number.isFinite(saving) && saving > 0 ? {saving, mostExpensive} : null;
   }
 
+  function bestPvpSaving(row) {
+    const {best, offers} = row;
+    if (!best || !available(best) || !validPrice(best.price)) return null;
+    const currency = best.currency || 'EUR';
+    const bestPrice = priceCents(best.price);
+    const candidates = [best, ...(offers || []).filter(offer => String(offer?.id) !== String(best.id))];
+    const offer = candidates.find(candidate =>
+      candidate
+      && available(candidate)
+      && validPrice(candidate.price)
+      && (candidate.currency || 'EUR') === currency
+      && priceCents(candidate.price) === bestPrice
+      && validPrice(candidate.original_price)
+      && priceCents(candidate.original_price) > bestPrice
+    );
+    if (!offer) return null;
+    const saving = (priceCents(offer.original_price) - bestPrice) / 100;
+    return Number.isFinite(saving) && saving > 0 ? {saving, offer} : null;
+  }
+
   function savingMarkup(row, extraClass = '') {
     const comparison = maximumStoreSaving(row);
-    if (!comparison) return '';
-    return `<p class="card-saving${extraClass ? ` ${extraClass}` : ''}">Ahorra <strong>${money(comparison.saving, row.best.currency || 'EUR')}</strong> frente a la tienda más cara</p>`;
+    const pvpSaving = bestPvpSaving(row);
+    const lines = [];
+    if (comparison) lines.push(`Ahorra <strong>${money(comparison.saving, row.best.currency || 'EUR')}</strong> frente a la tienda más cara disponible`);
+    if (pvpSaving) lines.push(`Ahorra <strong>${money(pvpSaving.saving, row.best.currency || 'EUR')}</strong> sobre el PVP`);
+    if (!lines.length) return '';
+    return `<p class="card-saving${extraClass ? ` ${extraClass}` : ''}">${lines.join('<br>')}</p>`;
   }
 
   function listCard(row) {
@@ -82,7 +107,8 @@
     const source = best || offers[0];
     const specs = ['shape', 'play', 'level'].map(key => feature(source, key)).filter(Boolean).slice(0, 3);
     const distinctStores = [...new Set((p.offers || offers).map(offer => offer.store).filter(Boolean))];
-    const pvpSource = [best, ...offers].find(offer => offer && validPrice(offer.original_price));
+    const pvpContext = bestPvpSaving(row);
+    const pvpSource = pvpContext?.offer || null;
     const pvp = pvpSource?.original_price;
     const href = '#pala/' + encodeURIComponent(p.id);
 
@@ -112,6 +138,12 @@
   card = function cardWithView(row) {
     if (state.catalogView === LIST) return listCard(row);
     let html = gridCard(row).replace(/<p class="card-saving">[\s\S]*?<\/p>/, '');
+    const pvpContext = bestPvpSaving(row);
+    if (pvpContext) {
+      html = html.replace(/<span class="card-pvp">[\s\S]*?<\/span>/, `<span class="card-pvp">PVP ${money(pvpContext.offer.original_price, pvpContext.offer.currency || row.best?.currency)}</span>`);
+    } else {
+      html = html.replace(/<span class="card-pvp">[\s\S]*?<\/span>/, '');
+    }
     const saving = savingMarkup(row);
     if (saving) html = html.replace('<p class="card-compare-meta">', `${saving}<p class="card-compare-meta">`);
     return html;

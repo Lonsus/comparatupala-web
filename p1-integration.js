@@ -168,7 +168,7 @@
       return;
     }
     const offerScript = document.createElement('script');
-    offerScript.src = 'offer-price-details.js?v=7';
+    offerScript.src = 'offer-price-details.js?v=8';
     offerScript.async = false;
     offerScript.dataset.offerPriceDetails = 'true';
     offerScript.addEventListener('load', () => onReady?.());
@@ -200,7 +200,7 @@
       return;
     }
     const script = document.createElement('script');
-    script.src = 'progressive-disclosure.js?v=3';
+    script.src = 'progressive-disclosure.js?v=4';
     script.async = false;
     script.dataset.progressiveDisclosure = 'true';
     script.addEventListener('load', () => {
