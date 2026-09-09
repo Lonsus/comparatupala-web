@@ -153,6 +153,15 @@
     document.body.appendChild(historyScript);
   }
 
+  function loadStoreCollapsibleSections() {
+    if (document.querySelector('script[data-store-collapsible-sections]')) return;
+    const storeScript = document.createElement('script');
+    storeScript.src = 'store-collapsible-sections.js?v=1';
+    storeScript.async = false;
+    storeScript.dataset.storeCollapsibleSections = 'true';
+    document.body.appendChild(storeScript);
+  }
+
   function loadOfferPriceDetails(onReady) {
     if (document.querySelector('script[data-offer-price-details]')) {
       onReady?.();
@@ -173,6 +182,7 @@
     }
     loadComparisonBulkActions();
     loadHistoryStoreActions();
+    loadStoreCollapsibleSections();
   }
 
   function loadProgressiveDisclosure() {
