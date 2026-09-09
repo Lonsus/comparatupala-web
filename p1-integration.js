@@ -11,7 +11,7 @@
   function setActiveLink(nav, link) {
     nav.querySelectorAll('[data-scroll]').forEach(item => {
       const active = item === link;
-      link.classList.toggle('active', active);
+      item.classList.toggle('active', active);
       if (active) link.setAttribute('aria-current', 'location');
       else link.removeAttribute('aria-current');
     });
