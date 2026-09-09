@@ -1,19 +1,6 @@
 'use strict';
 
 (() => {
-  const publishedImageUrl = value => {
-    const raw = String(value ?? '').trim();
-    if (!raw) return '';
-    try {
-      const url = new URL(raw);
-      if (['https:', 'http:'].includes(url.protocol)) return url.href;
-    } catch {}
-
-    const normalized = raw.replace(/^\.\//, '').replace(/^\//, '');
-    if (normalized.startsWith('images/products/') && !normalized.includes('..')) return normalized;
-    return '';
-  };
-
   productImage = function productImageWithPublishedPaths(product, detail = false) {
     const offers = product.offers || [];
     const urls = [...new Set([

@@ -12,6 +12,18 @@ const money = (v,c='EUR') => validPrice(v) ? new Intl.NumberFormat('es-ES',{styl
 const timestamp = v => v ? new Date(v).getTime() : NaN;
 const date = (v,full=false) => Number.isFinite(timestamp(v)) ? new Intl.DateTimeFormat('es-ES',{dateStyle:'medium',...(full?{timeStyle:'short'}:{}),timeZone:'Europe/Madrid'}).format(new Date(v)) : 'Sin fecha';
 const safeUrl = value => {try {const u=new URL(value);return ['https:','http:'].includes(u.protocol)?u.href:'';}catch{return '';}};
+const publishedImageUrl = value => {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  try {
+    const url = new URL(raw);
+    if (['https:', 'http:'].includes(url.protocol)) return url.href;
+  } catch {}
+
+  const normalized = raw.replace(/^\.\//, '').replace(/^\//, '');
+  if (normalized.startsWith('images/products/') && !normalized.includes('..')) return normalized;
+  return '';
+};
 const externalLink = (url,label,classes='') => safeUrl(url)?`<a class="${classes}" href="${esc(safeUrl(url))}" target="_blank" rel="noopener noreferrer">${label}</a>`:'<span class="muted">Enlace no disponible</span>';
 const storeLabel = s => {const href=storeHref(s),label=esc(storeName(s));return href?`<a class="offer-store-link" href="${esc(href)}">${label}</a>`:`<span class="offer-store-name">${label}</span>`;};
 const hasRatingValue = v => v!==null && v!==undefined && v!=='';
@@ -77,7 +89,7 @@ function productMatch(p,f){
 }
 function productImage(p,detail=false){
   const offers=p.offers||[];
-  const urls=[...new Set([p.image_url,...offers.filter(o=>o.active!==false).map(o=>o.image_url),...offers.filter(o=>o.active===false).map(o=>o.image_url)].map(safeUrl).filter(Boolean))];
+  const urls=[...new Set([p.image_url,...offers.filter(o=>o.active!==false).map(o=>o.image_url),...offers.filter(o=>o.active===false).map(o=>o.image_url)].map(publishedImageUrl).filter(Boolean))];
   return `<div class="product-media ${detail?'detail-media':''} ${urls.length?'':'is-missing'}">${urls.length?`<img src="${esc(urls[0])}" data-image-fallbacks="${esc(JSON.stringify(urls.slice(1)))}" alt="${esc(p.name)}" loading="lazy">`:''}<span>Imagen no disponible</span></div>`;
 }
 function bindImageFallback(root){
@@ -283,12 +295,12 @@ function updateNavigation(currentNav){
 }
 function renderLandingProduct(){
   // Use a real, comparable catalog entry; leave the static introduction if none exists.
-  const product=state.products.find(p=>safeUrl(p.image_url)&&new Set(p.offers.filter(o=>available(o)&&validPrice(o.price)&&(o.currency||'EUR')==='EUR').map(o=>o.store)).size>1);
+  const product=state.products.find(p=>publishedImageUrl(p.image_url)&&new Set(p.offers.filter(o=>available(o)&&validPrice(o.price)&&(o.currency||'EUR')==='EUR').map(o=>o.store)).size>1);
   if(!product)return;
   const offers=product.offers.filter(o=>available(o)&&validPrice(o.price)&&(o.currency||'EUR')==='EUR');
   const price=Math.min(...offers.map(o=>Number(o.price)));
   const root=document.getElementById('landing-product');
-  root.innerHTML=`<img class="landing-product-image" src="${esc(safeUrl(product.image_url))}" alt="${esc(product.name)}" width="280" height="200" referrerpolicy="no-referrer"><p class="landing-product-label">DEL CATÁLOGO</p><h2 class="landing-product-name">${esc(product.name)}</h2><div class="landing-product-price"><span>Precio registrado desde</span><strong>${money(price)}</strong></div><a href="#pala/${encodeURIComponent(product.id)}">Comparar en ${new Set(offers.map(o=>o.store)).size} tiendas <span aria-hidden="true">↗</span></a><p class="landing-product-note">Sin gastos de envío · Consulta el precio en tienda</p>`;
+  root.innerHTML=`<img class="landing-product-image" src="${esc(publishedImageUrl(product.image_url))}" alt="${esc(product.name)}" width="280" height="200" referrerpolicy="no-referrer"><p class="landing-product-label">DEL CATÁLOGO</p><h2 class="landing-product-name">${esc(product.name)}</h2><div class="landing-product-price"><span>Precio registrado desde</span><strong>${money(price)}</strong></div><a href="#pala/${encodeURIComponent(product.id)}">Comparar en ${new Set(offers.map(o=>o.store)).size} tiendas <span aria-hidden="true">↗</span></a><p class="landing-product-note">Sin gastos de envío · Consulta el precio en tienda</p>`;
   root.querySelector('img').addEventListener('error',event=>{event.currentTarget.hidden=true;},{once:true});
 }
 function renderStats(products,stats){
