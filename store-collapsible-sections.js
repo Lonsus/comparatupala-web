@@ -44,13 +44,14 @@
       <summary class="store-collapsible-summary">
         <div class="store-collapsible-summary-copy">
           <p class="eyebrow">RESUMEN DE LA TIENDA</p>
-          <h2>Datos y estadísticas</h2>
+          <h2 id="store-stats-title">Datos y estadísticas</h2>
           <p>Catálogo monitorizado, disponibilidad, precios y descuentos.</p>
         </div>
         <span class="store-collapsible-indicator" aria-hidden="true"></span>
       </summary>`;
 
     stats.dataset.collapsibleEnhanced = 'true';
+    stats.setAttribute('aria-labelledby', 'store-stats-title');
     stats.before(wrapper);
     wrapper.appendChild(stats);
   }
@@ -60,7 +61,8 @@
     if (!catalog || catalog.dataset.collapsibleEnhanced === 'true') return;
 
     const heading = catalog.querySelector(':scope > .store-catalog-heading');
-    const title = heading?.querySelector('h2')?.textContent?.trim() || 'Catálogo de la tienda';
+    const originalTitle = heading?.querySelector('h2');
+    const title = originalTitle?.textContent?.trim() || 'Catálogo de la tienda';
     const eyebrow = heading?.querySelector('.eyebrow')?.textContent?.trim() || 'CATÁLOGO DE LA TIENDA';
     const status = heading?.querySelector('#store-result-count');
 
@@ -70,13 +72,17 @@
     wrapper.innerHTML = `
       <summary class="store-collapsible-summary">
         <div class="store-collapsible-summary-copy">
-          <p class="eyebrow">${eyebrow}</p>
-          <h2>${title}</h2>
+          <p class="eyebrow"></p>
+          <h2 id="store-catalog-collapsible-title"></h2>
           <p class="store-collapsible-catalog-status muted"></p>
         </div>
         <span class="store-collapsible-indicator" aria-hidden="true"></span>
       </summary>`;
 
+    wrapper.querySelector('.eyebrow').textContent = eyebrow;
+    wrapper.querySelector('#store-catalog-collapsible-title').textContent = title;
+    originalTitle?.removeAttribute('id');
+    catalog.setAttribute('aria-labelledby', 'store-catalog-collapsible-title');
     catalog.dataset.collapsibleEnhanced = 'true';
     catalog.before(wrapper);
     wrapper.appendChild(catalog);
