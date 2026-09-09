@@ -61,4 +61,12 @@
 
     return template.innerHTML;
   };
+
+  document.addEventListener('toggle', event => {
+    const panel = event.target;
+    if (!(panel instanceof HTMLDetailsElement) || panel.id !== 'offers-panel' || panel.open) return;
+    panel.querySelectorAll('details.offers-overflow[open]').forEach(details => {
+      details.open = false;
+    });
+  }, true);
 })();
