@@ -35,7 +35,7 @@
       .catalog-list-row .catalog-history-link{white-space:nowrap}
       .history-stats.history-stats-with-average{grid-template-columns:repeat(4,minmax(0,1fr))}
       @media(hover:none),(pointer:coarse){
-        .catalog-history-trigger{opacity:1;transform:none;pointer-events:auto}
+        .catalog-history-trigger{top:10px;right:48px;bottom:auto;opacity:1;transform:none;pointer-events:auto}
       }
       @media(max-width:800px){
         .catalog-list-row .catalog-history-overlay-inner{grid-template-columns:1fr;gap:10px;text-align:center}
@@ -56,7 +56,7 @@
         .catalog-history-stat span{font-size:9px}
         .catalog-history-stat strong{font-size:13px}
         .catalog-history-link{font-size:11px}
-        .catalog-history-trigger{right:7px;bottom:7px;min-height:29px;padding:5px 8px;font-size:10px}
+        .catalog-history-trigger{min-height:29px;padding:5px 8px;font-size:10px}
       }
       @media(prefers-reduced-motion:reduce){.catalog-history-overlay,.catalog-history-trigger{transition:none}}
     `;
