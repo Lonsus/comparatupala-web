@@ -11,9 +11,9 @@
   function setActiveLink(nav, link) {
     nav.querySelectorAll('[data-scroll]').forEach(item => {
       const active = item === link;
-      item.classList.toggle('active', active);
-      if (active) item.setAttribute('aria-current', 'location');
-      else item.removeAttribute('aria-current');
+      link.classList.toggle('active', active);
+      if (active) link.setAttribute('aria-current', 'location');
+      else link.removeAttribute('aria-current');
     });
   }
 
@@ -168,7 +168,7 @@
       return;
     }
     const offerScript = document.createElement('script');
-    offerScript.src = 'offer-price-details.js?v=2';
+    offerScript.src = 'offer-price-details.js?v=3';
     offerScript.async = false;
     offerScript.dataset.offerPriceDetails = 'true';
     offerScript.addEventListener('load', () => onReady?.());
