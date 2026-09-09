@@ -168,7 +168,7 @@
       return;
     }
     const offerScript = document.createElement('script');
-    offerScript.src = 'offer-price-details.js?v=4';
+    offerScript.src = 'offer-price-details.js?v=5';
     offerScript.async = false;
     offerScript.dataset.offerPriceDetails = 'true';
     offerScript.addEventListener('load', () => onReady?.());
