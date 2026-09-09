@@ -23,6 +23,7 @@
         .comparison-bulk-action{flex:1 1 auto}
         .workspace.filters-below-catalog{display:block}
         .workspace.filters-below-catalog>.results-section{width:100%;min-width:0}
+        .catalog-mobile-search{width:100%;margin:0 0 14px}
         .catalog-inline-filters{position:static!important;top:auto!important;width:100%;max-height:none!important;overflow:visible!important;margin:0 0 14px;padding:12px 14px;border-radius:14px}
         .catalog-inline-filters #filter-toggle{display:flex!important;align-items:center;justify-content:space-between;gap:14px;width:100%;min-height:44px;padding:8px 2px;border:0;background:transparent;color:var(--ink);font-size:15px;font-weight:750;text-align:left}
         .catalog-inline-filters #filter-toggle>span{display:none}
@@ -33,24 +34,36 @@
     document.head.appendChild(style);
   }
 
-  function placeAdvancedFilters() {
-    const workspace = document.querySelector('.workspace');
+  function placeMobileCatalogControls() {
+    const catalogView = document.getElementById('catalog-view');
+    const workspace = catalogView?.querySelector('.workspace');
     const results = workspace?.querySelector('.results-section');
     const heading = results?.querySelector('.results-heading');
     const panel = document.querySelector('.filters-panel');
-    if (!workspace || !results || !heading || !panel) return;
+    const search = document.querySelector('.home-search');
+    if (!catalogView || !workspace || !results || !heading || !panel || !search) return;
 
     if (mobileFiltersQuery.matches) {
       workspace.classList.add('filters-below-catalog');
+      search.classList.add('catalog-mobile-search');
       panel.classList.add('catalog-inline-filters');
-      if (panel.parentElement !== results || panel.previousElementSibling !== heading) {
-        heading.insertAdjacentElement('afterend', panel);
+
+      if (search.parentElement !== results || search.previousElementSibling !== heading) {
+        heading.insertAdjacentElement('afterend', search);
+      }
+      if (panel.parentElement !== results || panel.previousElementSibling !== search) {
+        search.insertAdjacentElement('afterend', panel);
       }
       return;
     }
 
     workspace.classList.remove('filters-below-catalog');
+    search.classList.remove('catalog-mobile-search');
     panel.classList.remove('catalog-inline-filters');
+
+    if (search.parentElement !== catalogView || search.nextElementSibling !== workspace) {
+      catalogView.insertBefore(search, workspace);
+    }
     if (panel.parentElement !== workspace || panel.nextElementSibling !== results) {
       workspace.insertBefore(panel, results);
     }
@@ -136,9 +149,9 @@
     productObserver.observe(root, {childList: true, subtree: true});
   }
 
-  mobileFiltersQuery.addEventListener?.('change', placeAdvancedFilters);
+  mobileFiltersQuery.addEventListener?.('change', placeMobileCatalogControls);
   ensureStyles();
-  placeAdvancedFilters();
+  placeMobileCatalogControls();
   observeComparisonHost();
   watchProductView();
 })();
