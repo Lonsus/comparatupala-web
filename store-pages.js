@@ -240,6 +240,7 @@
   }
 
   function showStoreView() {
+    document.getElementById('landing-view').hidden = true;
     state.product = null;
     state.savedOnly = false;
     document.getElementById('catalog-view').hidden = true;

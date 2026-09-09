@@ -1,6 +1,19 @@
 'use strict';
 
 (() => {
+  productImage = function productImageWithPublishedPaths(product, detail = false) {
+    const offers = product.offers || [];
+    const urls = [...new Set([
+      product.image_url,
+      ...offers.filter(offer => offer.active !== false).map(offer => offer.image_url),
+      ...offers.filter(offer => offer.active === false).map(offer => offer.image_url)
+    ].map(publishedImageUrl).filter(Boolean))];
+
+    return `<div class="product-media ${detail ? 'detail-media' : ''} ${urls.length ? '' : 'is-missing'}">${urls.length ? `<img src="${esc(urls[0])}" data-image-fallbacks="${esc(JSON.stringify(urls.slice(1)))}" alt="${esc(product.name)}" loading="lazy">` : ''}<span>Imagen no disponible</span></div>`;
+  };
+})();
+
+(() => {
   const STYLE_ID = 'catalog-history-preview-style';
   const CARD_SELECTOR = '#products > .card:not(.skeleton-card)';
   const statsCache = new Map();

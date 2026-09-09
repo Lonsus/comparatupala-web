@@ -12,6 +12,18 @@ const money = (v,c='EUR') => validPrice(v) ? new Intl.NumberFormat('es-ES',{styl
 const timestamp = v => v ? new Date(v).getTime() : NaN;
 const date = (v,full=false) => Number.isFinite(timestamp(v)) ? new Intl.DateTimeFormat('es-ES',{dateStyle:'medium',...(full?{timeStyle:'short'}:{}),timeZone:'Europe/Madrid'}).format(new Date(v)) : 'Sin fecha';
 const safeUrl = value => {try {const u=new URL(value);return ['https:','http:'].includes(u.protocol)?u.href:'';}catch{return '';}};
+const publishedImageUrl = value => {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  try {
+    const url = new URL(raw);
+    if (['https:', 'http:'].includes(url.protocol)) return url.href;
+  } catch {}
+
+  const normalized = raw.replace(/^\.\//, '').replace(/^\//, '');
+  if (normalized.startsWith('images/products/') && !normalized.includes('..')) return normalized;
+  return '';
+};
 const externalLink = (url,label,classes='') => safeUrl(url)?`<a class="${classes}" href="${esc(safeUrl(url))}" target="_blank" rel="noopener noreferrer">${label}</a>`:'<span class="muted">Enlace no disponible</span>';
 const storeLabel = s => {const href=storeHref(s),label=esc(storeName(s));return href?`<a class="offer-store-link" href="${esc(href)}">${label}</a>`:`<span class="offer-store-name">${label}</span>`;};
 const hasRatingValue = v => v!==null && v!==undefined && v!=='';
@@ -77,7 +89,7 @@ function productMatch(p,f){
 }
 function productImage(p,detail=false){
   const offers=p.offers||[];
-  const urls=[...new Set([p.image_url,...offers.filter(o=>o.active!==false).map(o=>o.image_url),...offers.filter(o=>o.active===false).map(o=>o.image_url)].map(safeUrl).filter(Boolean))];
+  const urls=[...new Set([p.image_url,...offers.filter(o=>o.active!==false).map(o=>o.image_url),...offers.filter(o=>o.active===false).map(o=>o.image_url)].map(publishedImageUrl).filter(Boolean))];
   return `<div class="product-media ${detail?'detail-media':''} ${urls.length?'':'is-missing'}">${urls.length?`<img src="${esc(urls[0])}" data-image-fallbacks="${esc(JSON.stringify(urls.slice(1)))}" alt="${esc(p.name)}" loading="lazy">`:''}<span>Imagen no disponible</span></div>`;
 }
 function bindImageFallback(root){
@@ -219,6 +231,31 @@ function toast(message){const el=document.getElementById('toast');el.textContent
 function toggleSaved(id){const was=state.saved.has(id);was?state.saved.delete(id):state.saved.add(id);let persisted=true;try{localStorage.setItem('comparatupala:saved',JSON.stringify([...state.saved]));}catch{persisted=false;}document.getElementById('saved-count').textContent=state.saved.size;document.querySelectorAll('[data-save]').forEach(el=>{if(el.dataset.save===id){const saved=state.saved.has(id),p=state.products.find(p=>p.id===id);el.setAttribute('aria-pressed',String(saved));el.setAttribute('aria-label',(saved?'Quitar de guardadas ':'Guardar ')+p.name);el.textContent=saved?'♥':'♡';}});if(state.savedOnly&&!state.product){const buttons=[...document.querySelectorAll('#products [data-save]')],index=buttons.findIndex(button=>button.dataset.save===id);renderCatalog();const next=document.querySelectorAll('#products [data-save]');(next[Math.min(index,next.length-1)]||document.getElementById('results-title')).focus({preventScroll:true});}toast(persisted?(was?'Pala quitada de guardadas':'Pala guardada en este dispositivo'):'Guardada solo durante esta sesión: el navegador no permite almacenamiento');}
 function resetFilters(){document.getElementById('filters').reset();document.getElementById('search').value='';state.page=1;renderCatalog();}
 function route(){
+  const home=!location.hash||location.hash==='#inicio'||location.hash==='#como-funciona';
+  document.getElementById('landing-view').hidden=!home;
+  if(home){
+    state.product=null;state.savedOnly=false;
+    document.getElementById('catalog-view').hidden=true;
+    document.getElementById('product-view').hidden=true;
+    document.title='ComparaTuPala.es — Elige tu próxima pala con criterio';
+    updateNavigation('nav-home');
+    const hash=location.hash;
+    requestAnimationFrame(()=>{
+      if(location.hash!==hash)return;
+      if(hash==='#como-funciona')focusSection(document.getElementById('como-funciona'));
+      else if(hash==='#inicio'){window.scrollTo(0,0);focusSection(document.getElementById('landing-title'),{scroll:false});}
+    });
+    return;
+  }
+  // Navigation and the loading/error surface remain available before data arrives.
+  if(!state.loaded){
+    document.getElementById('catalog-view').hidden=false;
+    document.getElementById('product-view').hidden=true;
+    const about=location.hash==='#quienes-somos'||location.hash==='#contacto';
+    updateNavigation(about?'nav-about':location.hash==='#guardadas'?'nav-saved':'nav-catalog');
+    if(about){document.dispatchEvent(new CustomEvent('show-about'));focusSection(document.getElementById(location.hash.slice(1)));}
+    return;
+  }
   const previousProduct=state.product,previousSaved=state.savedOnly;
   const hash=location.hash,match=hash.match(/^#pala\/([^?]+)/);let p=null;
   if(match){try{p=state.products.find(p=>p.id===decodeURIComponent(match[1]));}catch{}}
@@ -247,11 +284,24 @@ function route(){
     });
   }
   const currentNav=hash==='#quienes-somos'||hash==='#contacto'?'nav-about':state.savedOnly?'nav-saved':'nav-catalog';
+  updateNavigation(currentNav);
+}
+function updateNavigation(currentNav){
   document.querySelectorAll('.topbar nav a').forEach(link=>{
     const active=link.id===currentNav;
     link.classList.toggle('active',active);
     if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
   });
+}
+function renderLandingProduct(){
+  // Use a real, comparable catalog entry; leave the static introduction if none exists.
+  const product=state.products.find(p=>publishedImageUrl(p.image_url)&&new Set(p.offers.filter(o=>available(o)&&validPrice(o.price)&&(o.currency||'EUR')==='EUR').map(o=>o.store)).size>1);
+  if(!product)return;
+  const offers=product.offers.filter(o=>available(o)&&validPrice(o.price)&&(o.currency||'EUR')==='EUR');
+  const price=Math.min(...offers.map(o=>Number(o.price)));
+  const root=document.getElementById('landing-product');
+  root.innerHTML=`<img class="landing-product-image" src="${esc(publishedImageUrl(product.image_url))}" alt="${esc(product.name)}" width="280" height="200" referrerpolicy="no-referrer"><p class="landing-product-label">DEL CATÁLOGO</p><h2 class="landing-product-name">${esc(product.name)}</h2><div class="landing-product-price"><span>Precio registrado desde</span><strong>${money(price)}</strong></div><a href="#pala/${encodeURIComponent(product.id)}">Comparar en ${new Set(offers.map(o=>o.store)).size} tiendas <span aria-hidden="true">↗</span></a><p class="landing-product-note">Sin gastos de envío · Consulta el precio en tienda</p>`;
+  root.querySelector('img').addEventListener('error',event=>{event.currentTarget.hidden=true;},{once:true});
 }
 function renderStats(products,stats){
   const multi=products.filter(p=>p.stores.length>1).length;
@@ -276,6 +326,7 @@ async function load(){
   for(const k of ['shape','level','play'])populate(k,products.flatMap(p=>p.offers.map(o=>{const v=feature(o,k);return [norm(v),v];})));
   document.getElementById('updated').textContent=date(stats.latest_check,true);
   renderStats(products,stats);
+  renderLandingProduct();
   state.loaded=true;
   route();
 }
@@ -286,9 +337,9 @@ function init(){
   document.getElementById('filter-toggle').addEventListener('click',e=>setFiltersExpanded(e.currentTarget.getAttribute('aria-expanded')!=='true'));
   document.getElementById('results-title').tabIndex=-1;
   document.querySelectorAll('.topbar a').forEach(link=>link.addEventListener('click',event=>{
-    if(!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&!event.altKey&&link.hash===location.hash&&state.loaded){event.preventDefault();route();}
+    if(!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&!event.altKey&&link.hash===location.hash){event.preventDefault();route();}
   }));
-  document.querySelector('.skip-link').addEventListener('click',e=>{e.preventDefault();const el=document.querySelector(state.product?'.product-title':'#results-title');el.setAttribute('tabindex','-1');el.focus();});
+  document.querySelector('.skip-link').addEventListener('click',e=>{e.preventDefault();const el=document.querySelector(!document.getElementById('landing-view').hidden?'#landing-title':state.product?'.product-title':'#results-title');focusSection(el);});
   const filters=document.getElementById('filters'),search=document.getElementById('search');
   filters.addEventListener('submit',e=>e.preventDefault());
   const scheduleCatalogRender=()=>{clearTimeout(state.filterTimer);state.filterTimer=setTimeout(()=>{state.page=1;renderCatalog();},140);};
@@ -308,7 +359,8 @@ function init(){
     if(el.hasAttribute('data-range')){state.range=Number(el.dataset.range);document.querySelectorAll('[data-range]').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.range)===state.range)));renderChart();}
   });
   document.addEventListener('change',e=>{if(e.target.hasAttribute('data-chart-store')){const s=e.target.dataset.chartStore;e.target.checked?state.hiddenStores.delete(s):state.hiddenStores.add(s);renderChart();}});
-  window.addEventListener('hashchange',()=>{if(state.loaded)route();});
+  window.addEventListener('hashchange',()=>route());
+  route();
   load().catch(err=>{document.getElementById('products').innerHTML=`<div class="empty"><h3>No pudimos cargar el catálogo</h3><p>${esc(err.message)}</p><button class="secondary-button" onclick="location.reload()">Reintentar</button></div>`;document.getElementById('products').setAttribute('aria-busy','false');document.getElementById('updated').textContent='Datos no disponibles';});
 }
 init();

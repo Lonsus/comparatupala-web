@@ -238,7 +238,7 @@
 (() => {
   if (document.querySelector('script[data-store-pages]')) return;
   const script = document.createElement('script');
-  script.src = 'store-pages.js?v=store-pages-1';
+  script.src = 'store-pages.js?v=landing-1';
   script.async = false;
   script.dataset.storePages = 'true';
   script.addEventListener('load', () => {
