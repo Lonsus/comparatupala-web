@@ -138,24 +138,45 @@
   function loadComparisonBulkActions() {
     if (document.querySelector('script[data-comparison-bulk-actions]')) return;
     const bulkScript = document.createElement('script');
-    bulkScript.src = 'comparison-bulk-actions.js?v=4';
+    bulkScript.src = 'comparison-bulk-actions.js?v=5';
     bulkScript.async = false;
     bulkScript.dataset.comparisonBulkActions = 'true';
     document.body.appendChild(bulkScript);
+  }
+
+  function loadOfferPriceDetails(onReady) {
+    if (document.querySelector('script[data-offer-price-details]')) {
+      onReady?.();
+      return;
+    }
+    const offerScript = document.createElement('script');
+    offerScript.src = 'offer-price-details.js?v=2';
+    offerScript.async = false;
+    offerScript.dataset.offerPriceDetails = 'true';
+    offerScript.addEventListener('load', () => onReady?.());
+    document.body.appendChild(offerScript);
+  }
+
+  function renderAfterEnhancements() {
+    if (state.loaded) {
+      if (state.product) renderProduct(state.product);
+      else renderCatalog();
+    }
+    loadComparisonBulkActions();
   }
 
   function loadProgressiveDisclosure() {
     if (!document.querySelector('link[data-progressive-disclosure]')) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'progressive-disclosure.css?v=3';
+      link.href = 'progressive-disclosure.css?v=4';
       link.dataset.progressiveDisclosure = 'true';
       document.head.appendChild(link);
     }
 
     if (document.querySelector('script[data-progressive-disclosure]')) {
       setupPageSizePreference();
-      loadComparisonBulkActions();
+      loadOfferPriceDetails(renderAfterEnhancements);
       return;
     }
     const script = document.createElement('script');
@@ -164,11 +185,7 @@
     script.dataset.progressiveDisclosure = 'true';
     script.addEventListener('load', () => {
       setupPageSizePreference();
-      if (state.loaded) {
-        if (state.product) renderProduct(state.product);
-        else renderCatalog();
-      }
-      loadComparisonBulkActions();
+      loadOfferPriceDetails(renderAfterEnhancements);
     });
     document.body.appendChild(script);
   }

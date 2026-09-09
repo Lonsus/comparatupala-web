@@ -28,6 +28,7 @@
         .catalog-inline-filters #filter-toggle{display:flex!important;align-items:center;justify-content:space-between;gap:14px;width:100%;min-height:44px;padding:8px 2px;border:0;background:transparent;color:var(--ink);font-size:15px;font-weight:750;text-align:left}
         .catalog-inline-filters #filter-toggle>span{display:none}
         .catalog-inline-filters .section-heading{margin:4px 0 14px;padding-top:14px;border-top:1px solid var(--line)}
+        .catalog-mobile-controls{width:100%;margin:0 0 16px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff}
       }
       @media(prefers-reduced-motion:reduce){.comparison-bulk-action{transition:none}}
     `;
@@ -41,12 +42,14 @@
     const heading = results?.querySelector('.results-heading');
     const panel = document.querySelector('.filters-panel');
     const search = document.querySelector('.home-search');
-    if (!catalogView || !workspace || !results || !heading || !panel || !search) return;
+    const controls = document.querySelector('.catalog-controls');
+    if (!catalogView || !workspace || !results || !heading || !panel || !search || !controls) return;
 
     if (mobileFiltersQuery.matches) {
       workspace.classList.add('filters-below-catalog');
       search.classList.add('catalog-mobile-search');
       panel.classList.add('catalog-inline-filters');
+      controls.classList.add('catalog-mobile-controls');
 
       if (search.parentElement !== results || search.previousElementSibling !== heading) {
         heading.insertAdjacentElement('afterend', search);
@@ -54,18 +57,25 @@
       if (panel.parentElement !== results || panel.previousElementSibling !== search) {
         search.insertAdjacentElement('afterend', panel);
       }
+      if (controls.parentElement !== results || controls.previousElementSibling !== panel) {
+        panel.insertAdjacentElement('afterend', controls);
+      }
       return;
     }
 
     workspace.classList.remove('filters-below-catalog');
     search.classList.remove('catalog-mobile-search');
     panel.classList.remove('catalog-inline-filters');
+    controls.classList.remove('catalog-mobile-controls');
 
     if (search.parentElement !== catalogView || search.nextElementSibling !== workspace) {
       catalogView.insertBefore(search, workspace);
     }
     if (panel.parentElement !== workspace || panel.nextElementSibling !== results) {
       workspace.insertBefore(panel, results);
+    }
+    if (controls.parentElement !== heading) {
+      heading.appendChild(controls);
     }
   }
 
