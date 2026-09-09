@@ -67,3 +67,8 @@
 @media(max-width:800px){.landing-example{gap:24px}.landing-steps{grid-template-columns:1fr;gap:18px}.landing-steps li+li{border-top:1px solid var(--landing-line);padding-top:20px}.landing-explore-heading{display:block}.landing-explore-heading>p{max-width:none;margin-top:12px}}
 @media(max-width:540px){.topbar nav a{font-size:.875rem;padding:10px}.landing-hero{padding:18px 20px 28px;border-radius:16px}.landing-main-logo{width:220px;max-width:100%}.landing-eyebrow{letter-spacing:.09em}.landing-actions{width:100%;gap:8px}.landing-cta{width:100%}.landing-highlights{padding:18px 0;margin-bottom:32px}.landing-highlights>div{padding:0 10px}.landing-highlights strong{font-size:1.6rem}.landing-highlights span{font-size:.875rem}.landing-disclosure>summary{grid-template-columns:24px minmax(0,1fr) 28px;gap:10px;padding:20px 16px}.landing-disclosure>summary strong{font-size:1.0625rem}.landing-disclosure-body{padding:20px 16px}.landing-toggle{width:28px;height:28px}.landing-example{grid-template-columns:1fr}#landing-view .stat{padding:14px 10px}.landing-product{padding:20px}}
 @media(prefers-reduced-motion:reduce){.landing-disclosure-body{animation:none}.landing-cta,.landing-disclosure,.landing-toggle{transition:none}.landing-cta:hover{transform:none}}
+
+/* Frame only the emblem in the header; the adjacent text supplies the name. */
+.topbar .brand-symbol{position:relative;display:block;flex:0 0 54px;width:54px;height:54px;overflow:hidden;border-radius:8px;background:#000}
+.topbar .brand-symbol img{position:absolute;display:block;width:140%;max-width:none;height:auto;left:-20%;top:-12%;border-radius:0}
+@media(max-width:540px){.topbar .brand-symbol{flex-basis:44px;width:44px;height:44px}}

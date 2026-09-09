@@ -21,13 +21,14 @@
 <link rel="stylesheet" href="about.css?v=ux-review-1">
 <link rel="stylesheet" href="contact-panel.css?v=ux-review-1">
 <link rel="stylesheet" href="cookie-consent.css?v=1">
-<link rel="stylesheet" href="landing.css?v=2">
+<link rel="stylesheet" href="landing.css?v=3">
+<link rel="stylesheet" href="experience.css?v=1">
 <script defer src="cookie-consent.js?v=1"></script>
 </head>
-<body>
+<body class="professional-ui">
 <a class="skip-link" href="#main">Saltar al contenido</a>
 <header class="topbar">
-<a class="brand-lockup" href="#inicio" aria-label="ComparaTuPala.es, inicio"><img src="assets/comparatupala-logo-green.png" alt="" width="54" height="54"><span>Compara<span class="accent">TuPala</span><small>.es / TU COMPARADOR DE PÁDEL</small></span></a>
+<a class="brand-lockup" href="#inicio" aria-label="ComparaTuPala.es, inicio"><span class="brand-symbol" aria-hidden="true"><img src="assets/comparatupala-logo-green.png" alt="" width="54" height="54"></span><span>Compara<span class="accent">TuPala</span><small>.es / TU COMPARADOR DE PÁDEL</small></span></a>
 <nav aria-label="Principal"><a href="#inicio" id="nav-home" class="active" aria-current="page">Inicio</a><a href="#catalogo" id="nav-catalog">Catálogo</a><a href="#guardadas" id="nav-saved">Guardadas <span id="saved-count">0</span></a><a href="#quienes-somos" id="nav-about">Quiénes somos</a></nav>
 <span class="topbar-note">Compara antes de entrar en pista.</span>
 </header>
@@ -68,10 +69,14 @@
   <noscript><p class="landing-noscript">Activa JavaScript para consultar el catálogo, comparar ofertas y guardar tus palas favoritas.</p></noscript>
 </div>
 <div id="catalog-view" hidden>
+<div class="catalog-wayfinding"><a href="#inicio">Inicio</a><span aria-hidden="true">/</span><span id="catalog-location">Catálogo</span><a class="catalog-stores-link" href="#tiendas">Explorar por tienda ↗</a></div>
 <section class="home-search" aria-labelledby="home-search-title">
-<div><p class="eyebrow">BÚSQUEDA RÁPIDA</p><h2 id="home-search-title">Buscar tu pala</h2><p class="muted">Encuentra una pala directamente por nombre, marca o EAN.</p></div>
-<label class="home-search-field field"><span>Buscar pala</span><input id="search" type="search" placeholder="Nombre, marca, EAN…" autocomplete="off"></label>
+<div><p class="eyebrow">BÚSQUEDA RÁPIDA</p><h1 id="home-search-title">Encuentra tu próxima pala</h1><p class="muted">Busca por nombre, marca o EAN. Ajusta los filtros para afinar tu elección.</p></div>
+<div class="home-search-field field"><span aria-hidden="true">Buscar pala</span><div class="search-input-wrap"><label class="search-input-label"><span class="visually-hidden">Buscar pala</span><input id="search" type="search" placeholder="Nombre, marca, EAN…" autocomplete="off"></label><button id="search-clear" type="button" aria-label="Borrar búsqueda" hidden>×</button></div></div>
 </section>
+<div class="catalog-quick-actions" role="group" aria-label="Filtros rápidos">
+<span>Empieza por aquí</span><button type="button" data-quick-filter="availability" aria-pressed="false" disabled>Disponibles</button><button type="button" data-quick-filter="offer-count" aria-pressed="false" disabled>Con varias ofertas</button><a href="#guardadas">Mis palas guardadas ↗</a>
+</div>
 <div class="workspace">
 <aside class="filters-panel"><button id="filter-toggle" type="button" class="filter-toggle" aria-expanded="true" aria-controls="filter-content">Filtros avanzados <span id="filter-summary">Marca, precio y características</span></button><div id="filter-content"><div class="section-heading"><h2>Afina tu búsqueda</h2><button id="reset" class="text-button" type="button">Limpiar</button></div>
 <form id="filters" class="filters">
@@ -135,6 +140,7 @@
 </div>
 </dialog>
 
+<button type="button" id="back-to-top" class="back-to-top" hidden aria-label="Volver al inicio de la página">↑ <span>Volver arriba</span></button>
 <div id="toast" class="toast" role="status"></div>
 <script src="app.js?v=landing-interactiva-1"></script>
 <script src="detail-enhancements.js?v=landing-1"></script>
@@ -142,4 +148,5 @@
 <script src="p1-integration.js?v=p1-1"></script>
 <script src="catalog-history-preview.js?v=landing-images-1"></script>
 <script src="contact-panel.js?v=landing-interactiva-1"></script>
+<script src="experience.js?v=1"></script>
 </body></html>
