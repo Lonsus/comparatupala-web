@@ -12,8 +12,8 @@
     nav.querySelectorAll('[data-scroll]').forEach(item => {
       const active = item === link;
       item.classList.toggle('active', active);
-      if (active) item.setAttribute('aria-current', 'location');
-      else item.removeAttribute('aria-current');
+      if (active) link.setAttribute('aria-current', 'location');
+      else link.removeAttribute('aria-current');
     });
   }
 
@@ -144,13 +144,31 @@
     document.body.appendChild(bulkScript);
   }
 
+  function loadHistoryStoreActions() {
+    if (document.querySelector('script[data-history-store-actions]')) return;
+    const historyScript = document.createElement('script');
+    historyScript.src = 'history-store-actions.js?v=1';
+    historyScript.async = false;
+    historyScript.dataset.historyStoreActions = 'true';
+    document.body.appendChild(historyScript);
+  }
+
+  function loadStoreCollapsibleSections() {
+    if (document.querySelector('script[data-store-collapsible-sections]')) return;
+    const storeScript = document.createElement('script');
+    storeScript.src = 'store-collapsible-sections.js?v=1';
+    storeScript.async = false;
+    storeScript.dataset.storeCollapsibleSections = 'true';
+    document.body.appendChild(storeScript);
+  }
+
   function loadOfferPriceDetails(onReady) {
     if (document.querySelector('script[data-offer-price-details]')) {
       onReady?.();
       return;
     }
     const offerScript = document.createElement('script');
-    offerScript.src = 'offer-price-details.js?v=2';
+    offerScript.src = 'offer-price-details.js?v=3';
     offerScript.async = false;
     offerScript.dataset.offerPriceDetails = 'true';
     offerScript.addEventListener('load', () => onReady?.());
@@ -163,6 +181,8 @@
       else renderCatalog();
     }
     loadComparisonBulkActions();
+    loadHistoryStoreActions();
+    loadStoreCollapsibleSections();
   }
 
   function loadProgressiveDisclosure() {

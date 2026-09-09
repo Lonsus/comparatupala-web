@@ -3,6 +3,23 @@
 (() => {
   const baseRenderOffers = renderOffers;
 
+  function mostExpensiveComparableStoreOffer(product, best) {
+    if (!best || !available(best) || !validPrice(best.price)) return null;
+    const bestCurrency = best.currency || 'EUR';
+    const byStore = new Map();
+
+    product.offers.forEach(offer => {
+      if (!offer?.store || !available(offer) || !validPrice(offer.price)) return;
+      if ((offer.currency || 'EUR') !== bestCurrency) return;
+      const previous = byStore.get(offer.store);
+      if (!previous || Number(offer.price) < Number(previous.price)) byStore.set(offer.store, offer);
+    });
+
+    byStore.delete(best.store);
+    return [...byStore.values()]
+      .sort((left, right) => Number(right.price) - Number(left.price))[0] || null;
+  }
+
   renderOffers = function renderOffersWithPriceDetails(product) {
     const html = baseRenderOffers(product);
     if (!html || !product?.offers?.length) return html;
@@ -12,6 +29,13 @@
 
     const best = bestOffer(product.offers);
     const bestCurrency = best?.currency || 'EUR';
+    const mostExpensiveStoreOffer = mostExpensiveComparableStoreOffer(product, best);
+    const bestSaving = best
+      && mostExpensiveStoreOffer
+      && validPrice(best.price)
+      && validPrice(mostExpensiveStoreOffer.price)
+      ? Number(mostExpensiveStoreOffer.price) - Number(best.price)
+      : null;
 
     template.content.querySelectorAll('.compact-offer').forEach(row => {
       const offerId = row.querySelector('[data-spec-offer]')?.dataset.specOffer;
@@ -32,6 +56,14 @@
         priceBlock.appendChild(original);
         restoredLabels.add('PVP');
         restoredLabels.add('Descuento');
+      }
+
+      if (best && String(offer.id) === String(best.id) && Number.isFinite(bestSaving) && bestSaving > 0) {
+        const savingElement = document.createElement('span');
+        savingElement.className = 'offer-original offer-saving-vs-max';
+        savingElement.textContent = `Ahorras ${money(bestSaving, bestCurrency)} frente a la tienda más cara (${storeName(mostExpensiveStoreOffer.store)})`;
+        priceBlock.appendChild(savingElement);
+        restoredLabels.add('Ahorro frente a la tienda más cara');
       }
 
       const delta = best
