@@ -71,7 +71,7 @@
     if (context.pvpOffer) {
       const pvpElement = document.createElement('span');
       pvpElement.className = 'hero-pvp';
-      pvpElement.innerHTML = `PVP <s>${money(context.pvpOffer.original_price, context.currency)}</s> · −${discount(context.pvpOffer)}%`;
+      pvpElement.innerHTML = `PVP <s>${money(context.pvpOffer.original_price, context.currency)}</s>`;
       anchor.insertAdjacentElement('afterend', pvpElement);
       anchor = pvpElement;
     }
