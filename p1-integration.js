@@ -138,7 +138,7 @@
   function loadComparisonBulkActions() {
     if (document.querySelector('script[data-comparison-bulk-actions]')) return;
     const bulkScript = document.createElement('script');
-    bulkScript.src = 'comparison-bulk-actions.js?v=4';
+    bulkScript.src = 'comparison-bulk-actions.js?v=5';
     bulkScript.async = false;
     bulkScript.dataset.comparisonBulkActions = 'true';
     document.body.appendChild(bulkScript);
