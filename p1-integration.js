@@ -162,6 +162,19 @@
     document.body.appendChild(storeScript);
   }
 
+  function loadCatalogCardPolish(onReady) {
+    if (document.querySelector('script[data-catalog-card-polish]')) {
+      onReady?.();
+      return;
+    }
+    const polishScript = document.createElement('script');
+    polishScript.src = 'catalog-card-polish.js?v=1';
+    polishScript.async = false;
+    polishScript.dataset.catalogCardPolish = 'true';
+    polishScript.addEventListener('load', () => onReady?.());
+    document.body.appendChild(polishScript);
+  }
+
   function loadOfferPriceDetails(onReady) {
     if (document.querySelector('script[data-offer-price-details]')) {
       onReady?.();
@@ -185,6 +198,11 @@
     loadStoreCollapsibleSections();
   }
 
+  function continueAfterProgressiveDisclosure() {
+    setupPageSizePreference();
+    loadCatalogCardPolish(() => loadOfferPriceDetails(renderAfterEnhancements));
+  }
+
   function loadProgressiveDisclosure() {
     if (!document.querySelector('link[data-progressive-disclosure]')) {
       const link = document.createElement('link');
@@ -195,18 +213,14 @@
     }
 
     if (document.querySelector('script[data-progressive-disclosure]')) {
-      setupPageSizePreference();
-      loadOfferPriceDetails(renderAfterEnhancements);
+      continueAfterProgressiveDisclosure();
       return;
     }
     const script = document.createElement('script');
     script.src = 'progressive-disclosure.js?v=4';
     script.async = false;
     script.dataset.progressiveDisclosure = 'true';
-    script.addEventListener('load', () => {
-      setupPageSizePreference();
-      loadOfferPriceDetails(renderAfterEnhancements);
-    });
+    script.addEventListener('load', continueAfterProgressiveDisclosure);
     document.body.appendChild(script);
   }
 
