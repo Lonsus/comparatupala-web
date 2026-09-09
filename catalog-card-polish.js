@@ -15,29 +15,46 @@
       .catalog-list-decision .catalog-card-savings{flex-basis:100%;width:100%;margin-top:6px}
       .catalog-list-decision .catalog-card-savings .card-saving{width:100%}
 
+      .decision-card:not(.catalog-list-row){
+        --catalog-action-size:36px;
+        --catalog-action-right:12px;
+        --catalog-action-top:12px;
+        --catalog-action-gap:8px;
+      }
+      .decision-card:not(.catalog-list-row) .card-visual>.save-button,
+      .decision-card.catalog-history-card:not(.catalog-list-row)>.catalog-history-trigger{
+        right:var(--catalog-action-right);
+        width:var(--catalog-action-size);
+        height:var(--catalog-action-size);
+        min-width:var(--catalog-action-size);
+        min-height:var(--catalog-action-size);
+        padding:0;
+        display:grid;
+        place-items:center;
+      }
+      .decision-card:not(.catalog-list-row) .card-visual>.save-button{
+        top:var(--catalog-action-top);
+        font-size:19px;
+        line-height:1;
+      }
+      .decision-card.catalog-history-card:not(.catalog-list-row)>.catalog-history-trigger{
+        top:calc(var(--catalog-action-top) + var(--catalog-action-size) + var(--catalog-action-gap));
+      }
+      .decision-card.catalog-history-card:not(.catalog-list-row)>.catalog-history-trigger svg{
+        width:18px;
+        height:18px;
+      }
+
       @media(max-width:800px){
-        .decision-card .card-visual>.save-button{
-          right:10px;
-          top:11px;
-          width:32px;
-          height:32px;
-          min-height:32px;
-          padding:0;
-          place-items:center;
-          font-size:19px;
-          line-height:1;
+        .decision-card:not(.catalog-list-row){
+          --catalog-action-size:31px;
+          --catalog-action-top:12px;
+          --catalog-action-gap:7px;
         }
-        .decision-card.catalog-history-card>.catalog-history-trigger{
-          right:10px;
-          top:51px;
-          width:32px;
-          height:32px;
-          min-height:32px;
-          padding:0;
-          display:grid;
-          place-items:center;
+        .decision-card:not(.catalog-list-row) .card-visual>.save-button{
+          font-size:18px;
         }
-        .decision-card.catalog-history-card>.catalog-history-trigger svg{
+        .decision-card.catalog-history-card:not(.catalog-list-row)>.catalog-history-trigger svg{
           width:16px;
           height:16px;
         }
@@ -61,6 +78,18 @@
       }
 
       @media(max-width:540px){
+        .decision-card:not(.catalog-list-row){
+          --catalog-action-size:30px;
+          --catalog-action-top:11px;
+          --catalog-action-gap:8px;
+        }
+        .decision-card:not(.catalog-list-row) .card-visual>.save-button{
+          font-size:17px;
+        }
+        .decision-card.catalog-history-card:not(.catalog-list-row)>.catalog-history-trigger svg{
+          width:15px;
+          height:15px;
+        }
         .catalog-card-savings{gap:5px}
         .catalog-card-savings .card-saving{padding:8px 9px;font-size:11px;line-height:1.35}
         .catalog-card-savings .card-saving strong{font-size:12px}
