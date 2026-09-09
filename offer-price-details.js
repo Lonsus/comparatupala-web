@@ -2,22 +2,110 @@
 
 (() => {
   const baseRenderOffers = renderOffers;
+  const baseRenderProduct = renderProduct;
 
-  function mostExpensiveComparableStoreOffer(product, best) {
-    if (!best || !available(best) || !validPrice(best.price)) return null;
-    const bestCurrency = best.currency || 'EUR';
+  const priceCents = value => Math.round(Number(value) * 100);
+
+  function comparableStoreOffers(product, currency) {
     const byStore = new Map();
 
-    product.offers.forEach(offer => {
+    (product?.offers || []).forEach(offer => {
       if (!offer?.store || !available(offer) || !validPrice(offer.price)) return;
-      if ((offer.currency || 'EUR') !== bestCurrency) return;
+      if ((offer.currency || 'EUR') !== currency) return;
       const previous = byStore.get(offer.store);
-      if (!previous || Number(offer.price) < Number(previous.price)) byStore.set(offer.store, offer);
+      if (!previous || priceCents(offer.price) < priceCents(previous.price)) byStore.set(offer.store, offer);
     });
 
-    byStore.delete(best.store);
-    return [...byStore.values()]
-      .sort((left, right) => Number(right.price) - Number(left.price))[0] || null;
+    return [...byStore.values()];
+  }
+
+  function bestPriceContext(product) {
+    const best = bestOffer(product?.offers || []);
+    if (!best || !validPrice(best.price)) {
+      return {best: null, currency: 'EUR', bestStoreOffers: [], mostExpensiveStoreOffer: null, bestSaving: null, pvpOffer: null};
+    }
+
+    const currency = best.currency || 'EUR';
+    const bestPrice = priceCents(best.price);
+    const storeOffers = comparableStoreOffers(product, currency);
+    const bestStoreOffers = storeOffers.filter(offer => priceCents(offer.price) === bestPrice);
+    const mostExpensiveStoreOffer = [...storeOffers]
+      .sort((left, right) => priceCents(right.price) - priceCents(left.price))[0] || null;
+    const savingCents = mostExpensiveStoreOffer ? priceCents(mostExpensiveStoreOffer.price) - bestPrice : null;
+    const bestSaving = Number.isFinite(savingCents) && savingCents > 0 ? savingCents / 100 : null;
+    const pvpCandidates = [
+      best,
+      ...bestStoreOffers.filter(offer => String(offer.id) !== String(best.id))
+    ];
+    const pvpOffer = pvpCandidates.find(offer =>
+      validPrice(offer?.original_price)
+      && priceCents(offer.original_price) > bestPrice
+    ) || null;
+
+    return {best, currency, bestStoreOffers, mostExpensiveStoreOffer, bestSaving, pvpOffer};
+  }
+
+  function isBestStoreOffer(offer, context) {
+    return context.bestStoreOffers.some(candidate => String(candidate.id) === String(offer.id));
+  }
+
+  function scrollToBestOffers() {
+    const panel = document.getElementById('offers-panel');
+    if (!panel) return;
+    if (panel instanceof HTMLDetailsElement) panel.open = true;
+    panel.scrollIntoView({
+      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+      block: 'start'
+    });
+  }
+
+  function enhanceBestPriceHero(product) {
+    const box = document.querySelector('#product-view .buy-box');
+    if (!box) return;
+
+    box.querySelectorAll('.hero-pvp, .hero-saving-vs-max').forEach(element => element.remove());
+
+    const context = bestPriceContext(product);
+    if (!context.best) return;
+
+    const priceElement = box.querySelector('.hero-price');
+    if (!priceElement) return;
+
+    priceElement.textContent = money(context.best.price, context.currency);
+
+    const storeLine = priceElement.nextElementSibling;
+    if (storeLine instanceof HTMLParagraphElement) {
+      const storeNames = [...new Set(context.bestStoreOffers.map(offer => storeName(offer.store)).filter(Boolean))];
+      storeLine.classList.add('hero-best-stores');
+      storeLine.textContent = storeNames.length ? storeNames.join(' · ') : storeName(context.best.store);
+    }
+
+    const primaryAction = box.querySelector('.primary-button');
+    if (primaryAction && context.bestStoreOffers.length > 1) {
+      const offersButton = document.createElement('button');
+      offersButton.type = 'button';
+      offersButton.className = primaryAction.className;
+      offersButton.textContent = 'Ver ofertas con mejor precio ↓';
+      offersButton.addEventListener('click', scrollToBestOffers);
+      primaryAction.replaceWith(offersButton);
+    }
+
+    let anchor = storeLine || priceElement;
+
+    if (context.pvpOffer) {
+      const pvpElement = document.createElement('span');
+      pvpElement.className = 'hero-pvp';
+      pvpElement.innerHTML = `PVP <s>${money(context.pvpOffer.original_price, context.currency)}</s>`;
+      anchor.insertAdjacentElement('afterend', pvpElement);
+      anchor = pvpElement;
+    }
+
+    if (Number.isFinite(context.bestSaving) && context.bestSaving > 0) {
+      const savingElement = document.createElement('div');
+      savingElement.className = 'hero-saving-vs-max';
+      savingElement.textContent = `Ahorras ${money(context.bestSaving, context.currency)} frente a la tienda más cara`;
+      anchor.insertAdjacentElement('afterend', savingElement);
+    }
   }
 
   renderOffers = function renderOffersWithPriceDetails(product) {
@@ -27,15 +115,9 @@
     const template = document.createElement('template');
     template.innerHTML = html;
 
-    const best = bestOffer(product.offers);
-    const bestCurrency = best?.currency || 'EUR';
-    const mostExpensiveStoreOffer = mostExpensiveComparableStoreOffer(product, best);
-    const bestSaving = best
-      && mostExpensiveStoreOffer
-      && validPrice(best.price)
-      && validPrice(mostExpensiveStoreOffer.price)
-      ? Number(mostExpensiveStoreOffer.price) - Number(best.price)
-      : null;
+    const context = bestPriceContext(product);
+    const best = context.best;
+    const bestCurrency = context.currency;
 
     template.content.querySelectorAll('.compact-offer').forEach(row => {
       const offerId = row.querySelector('[data-spec-offer]')?.dataset.specOffer;
@@ -58,16 +140,24 @@
         restoredLabels.add('Descuento');
       }
 
-      if (best && String(offer.id) === String(best.id) && Number.isFinite(bestSaving) && bestSaving > 0) {
-        const savingElement = document.createElement('span');
-        savingElement.className = 'offer-original offer-saving-vs-max';
-        savingElement.textContent = `Ahorras ${money(bestSaving, bestCurrency)} frente a la tienda más cara (${storeName(mostExpensiveStoreOffer.store)})`;
-        priceBlock.appendChild(savingElement);
-        restoredLabels.add('Ahorro frente a la tienda más cara');
+      if (isBestStoreOffer(offer, context)) {
+        row.classList.add('best-offer');
+        const info = row.querySelector('.offer-info');
+        if (info && !info.textContent.includes('Mejor precio disponible')) {
+          info.textContent = `Mejor precio disponible · ${info.textContent}`;
+        }
+
+        if (Number.isFinite(context.bestSaving) && context.bestSaving > 0) {
+          const savingElement = document.createElement('span');
+          savingElement.className = 'offer-saving-vs-max';
+          savingElement.textContent = `Ahorras ${money(context.bestSaving, bestCurrency)} frente a la tienda más cara`;
+          priceBlock.appendChild(savingElement);
+          restoredLabels.add('Ahorro frente a la tienda más cara');
+        }
       }
 
       const delta = best
-        && offer.id !== best.id
+        && priceCents(offer.price) !== priceCents(best.price)
         && offerCurrency === bestCurrency
         && validPrice(offer.price)
         && validPrice(best.price)
@@ -92,6 +182,11 @@
     });
 
     return template.innerHTML;
+  };
+
+  renderProduct = function renderProductWithBestPriceSummary(product) {
+    baseRenderProduct(product);
+    enhanceBestPriceHero(product);
   };
 
   document.addEventListener('toggle', event => {

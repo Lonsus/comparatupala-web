@@ -168,7 +168,7 @@
       return;
     }
     const offerScript = document.createElement('script');
-    offerScript.src = 'offer-price-details.js?v=3';
+    offerScript.src = 'offer-price-details.js?v=7';
     offerScript.async = false;
     offerScript.dataset.offerPriceDetails = 'true';
     offerScript.addEventListener('load', () => onReady?.());
@@ -189,7 +189,7 @@
     if (!document.querySelector('link[data-progressive-disclosure]')) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'progressive-disclosure.css?v=4';
+      link.href = 'progressive-disclosure.css?v=7';
       link.dataset.progressiveDisclosure = 'true';
       document.head.appendChild(link);
     }

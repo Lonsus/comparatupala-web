@@ -40,8 +40,14 @@
 .progressive-detail .product-meta{margin-bottom:0}
 
 .compact-offer{grid-template-columns:minmax(0,1fr) auto;gap:10px 18px;padding:14px 16px}
-.compact-offer .offer-price{align-self:start;font-size:25px}
+.compact-offer .offer-price{align-self:start;font-size:25px;min-width:0;max-width:100%}
+.compact-offer .offer-original,.compact-offer .offer-delta,.compact-offer .offer-saving-vs-max{white-space:normal;overflow-wrap:anywhere}
 .compact-offer .offer-actions{grid-column:1/-1;padding-top:9px}
+.offer-saving-vs-max{display:block;margin:8px 0 0 auto;padding:8px 10px;max-width:280px;border:1px solid #c0e7d0;border-radius:9px;background:var(--green-soft);color:var(--green-dark);font-size:12px;font-weight:750;line-height:1.35;text-align:left}
+.hero-best-stores{margin:7px 0 0!important;color:#c1d2c6!important;line-height:1.4;overflow-wrap:anywhere}
+.hero-pvp{display:block;margin-top:7px;color:#b9cfc0;font-size:13px;font-variant-numeric:tabular-nums}
+.hero-pvp s{text-decoration-thickness:1.5px}
+.hero-saving-vs-max{margin:10px 0 0;padding:9px 10px;border:1px solid #c0e7d0;border-radius:9px;background:var(--green-soft);color:var(--green-dark);font-size:12px;font-weight:750;line-height:1.35}
 .offer-more{grid-column:1/-1;border-top:1px solid #e2eee7;padding-top:8px}
 .offer-more>summary{display:inline-flex;align-items:center;gap:7px;color:var(--green-dark);font-size:12px;font-weight:700;cursor:pointer;list-style:none}
 .offer-more>summary::-webkit-details-marker{display:none}
@@ -103,7 +109,10 @@
   .catalog-list-main .feature-tags span:nth-child(n+3){display:none}
   .catalog-list-decision strong{font-size:21px}
   .offer-more dl{grid-template-columns:1fr}
-  .compact-offer{grid-template-columns:1fr auto;padding:13px}
+  .compact-offer{grid-template-columns:minmax(0,1fr);padding:13px}
+  .compact-offer .offer-store-block,.compact-offer .offer-price,.compact-offer .offer-actions,.compact-offer .offer-more{grid-column:1/-1}
+  .compact-offer .offer-price{width:100%;text-align:left}
+  .offer-saving-vs-max{max-width:none;margin-left:0}
   .compact-offer .offer-actions{align-items:flex-start;flex-direction:column}
   .offers-overflow>summary{justify-content:space-between;text-align:left}
   .offers-overflow-list{padding:10px}
