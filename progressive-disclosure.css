@@ -43,11 +43,15 @@
 .compact-offer .offer-price{align-self:start;font-size:25px;min-width:0;max-width:100%}
 .compact-offer .offer-original,.compact-offer .offer-delta,.compact-offer .offer-saving-vs-max{white-space:normal;overflow-wrap:anywhere}
 .compact-offer .offer-actions{grid-column:1/-1;padding-top:9px}
-.offer-saving-vs-max{display:block;margin:8px 0 0 auto;padding:8px 10px;max-width:280px;border:1px solid #c0e7d0;border-radius:9px;background:var(--green-soft);color:var(--green-dark);font-size:12px;font-weight:750;line-height:1.35;text-align:left}
+.offer-savings{display:grid;gap:6px;margin:8px 0 0 auto;max-width:280px}
+.offer-saving-vs-max{display:block;margin:0;padding:8px 10px;border:1px solid #c0e7d0;border-radius:9px;background:var(--green-soft);color:var(--green-dark);font-size:12px;font-weight:750;line-height:1.35;text-align:left}
 .hero-best-stores{margin:7px 0 0!important;color:#c1d2c6!important;line-height:1.4;overflow-wrap:anywhere}
 .hero-pvp{display:block;margin-top:7px;color:#b9cfc0;font-size:13px;font-variant-numeric:tabular-nums}
 .hero-pvp s{text-decoration-thickness:1.5px}
-.hero-saving-vs-max{margin:10px 0 0;padding:9px 10px;border:1px solid #c0e7d0;border-radius:9px;background:var(--green-soft);color:var(--green-dark);font-size:12px;font-weight:750;line-height:1.35}
+.hero-savings{display:grid;gap:6px;margin:10px 0 0}
+.hero-saving-vs-max{margin:0;padding:9px 10px;border:1px solid #c0e7d0;border-radius:9px;background:var(--green-soft);color:var(--green-dark);font-size:12px;font-weight:750;line-height:1.35}
+.offer-saving-vs-store,.hero-saving-vs-store{background:#e1f7ea;border-color:#b4dfc5}
+.offer-saving-vs-pvp,.hero-saving-vs-pvp{background:#eef9f3;border-color:#cce8d7}
 .offer-more{grid-column:1/-1;border-top:1px solid #e2eee7;padding-top:8px}
 .offer-more>summary{display:inline-flex;align-items:center;gap:7px;color:var(--green-dark);font-size:12px;font-weight:700;cursor:pointer;list-style:none}
 .offer-more>summary::-webkit-details-marker{display:none}
@@ -112,7 +116,7 @@
   .compact-offer{grid-template-columns:minmax(0,1fr);padding:13px}
   .compact-offer .offer-store-block,.compact-offer .offer-price,.compact-offer .offer-actions,.compact-offer .offer-more{grid-column:1/-1}
   .compact-offer .offer-price{width:100%;text-align:left}
-  .offer-saving-vs-max{max-width:none;margin-left:0}
+  .offer-savings{max-width:none;margin-left:0}
   .compact-offer .offer-actions{align-items:flex-start;flex-direction:column}
   .offers-overflow>summary{justify-content:space-between;text-align:left}
   .offers-overflow-list{padding:10px}

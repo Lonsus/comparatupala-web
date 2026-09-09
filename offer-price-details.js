@@ -65,7 +65,7 @@
     const box = document.querySelector('#product-view .buy-box');
     if (!box) return;
 
-    box.querySelectorAll('.hero-pvp, .hero-saving-vs-max').forEach(element => element.remove());
+    box.querySelectorAll('.hero-pvp, .hero-savings, .hero-saving-vs-max').forEach(element => element.remove());
 
     const context = bestPriceContext(product);
     if (!context.best) return;
@@ -102,18 +102,26 @@
       anchor = pvpElement;
     }
 
-    const savingLines = [];
+    const savingItems = [];
     if (Number.isFinite(context.bestSaving) && context.bestSaving > 0) {
-      savingLines.push(`Ahorras ${money(context.bestSaving, context.currency)} frente a la tienda más cara disponible`);
+      savingItems.push({
+        className: 'hero-saving-vs-store',
+        text: `Ahorras ${money(context.bestSaving, context.currency)} frente a la tienda más cara disponible`
+      });
     }
     if (Number.isFinite(context.pvpSaving) && context.pvpSaving > 0) {
-      savingLines.push(`Ahorras ${money(context.pvpSaving, context.currency)} sobre el PVP`);
+      savingItems.push({
+        className: 'hero-saving-vs-pvp',
+        text: `Ahorras ${money(context.pvpSaving, context.currency)} sobre el PVP`
+      });
     }
-    if (savingLines.length) {
-      const savingElement = document.createElement('div');
-      savingElement.className = 'hero-saving-vs-max';
-      savingElement.innerHTML = savingLines.join('<br>');
-      anchor.insertAdjacentElement('afterend', savingElement);
+    if (savingItems.length) {
+      const savingsElement = document.createElement('div');
+      savingsElement.className = 'hero-savings';
+      savingsElement.innerHTML = savingItems
+        .map(item => `<div class="hero-saving-vs-max ${item.className}">${item.text}</div>`)
+        .join('');
+      anchor.insertAdjacentElement('afterend', savingsElement);
     }
   }
 
@@ -157,9 +165,12 @@
           info.textContent = `Mejor precio disponible · ${info.textContent}`;
         }
 
-        const savingLines = [];
+        const savingItems = [];
         if (Number.isFinite(context.bestSaving) && context.bestSaving > 0) {
-          savingLines.push(`Ahorras ${money(context.bestSaving, bestCurrency)} frente a la tienda más cara disponible`);
+          savingItems.push({
+            className: 'offer-saving-vs-store',
+            text: `Ahorras ${money(context.bestSaving, bestCurrency)} frente a la tienda más cara disponible`
+          });
           restoredLabels.add('Ahorro frente a la tienda más cara disponible');
         }
         const offerPvpSavingCents = hasDiscount && Number.isFinite(bestPrice)
@@ -167,14 +178,19 @@
           : null;
         const offerPvpSaving = Number.isFinite(offerPvpSavingCents) && offerPvpSavingCents > 0 ? offerPvpSavingCents / 100 : null;
         if (Number.isFinite(offerPvpSaving) && offerPvpSaving > 0) {
-          savingLines.push(`Ahorras ${money(offerPvpSaving, offerCurrency)} sobre el PVP`);
+          savingItems.push({
+            className: 'offer-saving-vs-pvp',
+            text: `Ahorras ${money(offerPvpSaving, offerCurrency)} sobre el PVP`
+          });
           restoredLabels.add('Ahorro sobre PVP');
         }
-        if (savingLines.length) {
-          const savingElement = document.createElement('span');
-          savingElement.className = 'offer-saving-vs-max';
-          savingElement.innerHTML = savingLines.join('<br>');
-          priceBlock.appendChild(savingElement);
+        if (savingItems.length) {
+          const savingsElement = document.createElement('div');
+          savingsElement.className = 'offer-savings';
+          savingsElement.innerHTML = savingItems
+            .map(item => `<span class="offer-saving-vs-max ${item.className}">${item.text}</span>`)
+            .join('');
+          priceBlock.appendChild(savingsElement);
         }
       }
 
