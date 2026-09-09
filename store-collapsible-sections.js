@@ -110,7 +110,17 @@
     queueMicrotask(enhanceStoreSections);
   }
 
+  function loadStoreCatalogEnhancements() {
+    if (document.querySelector('script[data-store-catalog-enhancements]')) return;
+    const script = document.createElement('script');
+    script.src = 'store-catalog-enhancements.js?v=1';
+    script.async = false;
+    script.dataset.storeCatalogEnhancements = 'true';
+    document.body.appendChild(script);
+  }
+
   ensureStyles();
   scheduleEnhancement();
   new MutationObserver(scheduleEnhancement).observe(document.body, {childList: true, subtree: true});
+  loadStoreCatalogEnhancements();
 })();
