@@ -6,14 +6,6 @@
   // Activar solo cuando exista un proveedor/endpoint de newsletter configurado y revisado.
   const NEWSLETTER_ENDPOINT = '';
 
-  const catalogSummary = document.getElementById('catalog-summary');
-  if (catalogSummary) {
-    catalogSummary.open = true;
-    catalogSummary.addEventListener('toggle', () => {
-      if (!catalogSummary.open) catalogSummary.open = true;
-    });
-  }
-
   const setupAboutCollapsibles = () => {
     const aboutSection = document.getElementById('quienes-somos');
     const aboutHeading = aboutSection?.querySelector('.about-heading');
