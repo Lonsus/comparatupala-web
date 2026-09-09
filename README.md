@@ -104,6 +104,13 @@ Para una vista previa local, sirve esta carpeta con `python -m http.server 8765`
 
 ## UX de la interfaz
 
+La entrada sin fragmento y `#inicio` muestran una landing independiente del catálogo.
+El botón principal abre `#catalogo`; `#como-funciona` explica el recorrido en tres pasos.
+El logo vuelve a Inicio y se mantienen los enlaces directos a palas, guardadas y tiendas.
+La portada funciona sin esperar a los JSON. Si existen ofertas disponibles en euros
+en varias tiendas, muestra una pala real con su precio mínimo registrado; si no,
+mantiene una presentación informativa sin cifras inventadas. Su diseño está en `landing.css`.
+
 La [revisión global de UX](docs/UX_REVIEW.md) documenta los criterios de plegado,
 navegación y adaptación responsive. La web continúa funcionando sin proceso de build.
 
