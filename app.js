@@ -306,13 +306,22 @@ function renderLandingProduct(){
 function renderStats(products,stats){
   const multi=products.filter(p=>p.stores.length>1).length;
   const inStock=products.filter(p=>p.offers.some(available)).length;
+  const brands=new Set(products.map(p=>norm(p.brand)).filter(Boolean)).size;
+  const withHistory=products.filter(p=>p.offers.some(o=>(state.history[String(o.id)]||[]).some(point=>validPrice(point.price)))).length;
+  const availableOffers=products.reduce((count,p)=>count+p.offers.filter(available).length,0);
   const metrics=[
     {value:products.length,label:'Palas en el catálogo',icon:'↗'},
     {value:inStock,label:'Palas en stock',icon:'✓'},
     {value:stats.offers,label:'Ofertas registradas',icon:'€'},
     {value:stats.stores.length,label:'Tiendas comparadas',icon:'⌘'},
-    {value:multi,label:'Palas en varias tiendas',icon:'⇄',featured:true}
+    {value:multi,label:'Palas en varias tiendas',icon:'⇄',featured:true},
+    {value:brands,label:'Marcas identificadas',icon:'◎'},
+    {value:withHistory,label:'Palas con precios históricos',icon:'↗'},
+    {value:availableOffers,label:'Ofertas con stock disponible',icon:'✓'}
   ];
+  const highlights=document.getElementById('landing-highlights');
+  highlights.innerHTML=[metrics[0],metrics[3],metrics[4]].map(({value,label})=>`<div><strong>${Number(value).toLocaleString('es-ES')}</strong><span>${label}</span></div>`).join('');
+  highlights.setAttribute('aria-busy','false');
   document.getElementById('stats').innerHTML=metrics.map(({value,label,icon,featured=false})=>`<div class="stat${featured?' stat-featured':''}"><div><strong>${Number(value).toLocaleString('es-ES')}</strong><span>${label}</span></div><div class="stat-icon" aria-hidden="true">${icon}</div></div>`).join('');
 }
 async function load(){
@@ -333,10 +342,9 @@ async function load(){
 function init(){
   const compact=matchMedia('(max-width:800px)');
   setFiltersExpanded(!compact.matches);
-  document.getElementById('catalog-summary').open=!compact.matches;
   document.getElementById('filter-toggle').addEventListener('click',e=>setFiltersExpanded(e.currentTarget.getAttribute('aria-expanded')!=='true'));
   document.getElementById('results-title').tabIndex=-1;
-  document.querySelectorAll('.topbar a').forEach(link=>link.addEventListener('click',event=>{
+  document.querySelectorAll('.topbar a, .landing-secondary').forEach(link=>link.addEventListener('click',event=>{
     if(!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&!event.altKey&&link.hash===location.hash){event.preventDefault();route();}
   }));
   document.querySelector('.skip-link').addEventListener('click',e=>{e.preventDefault();const el=document.querySelector(!document.getElementById('landing-view').hidden?'#landing-title':state.product?'.product-title':'#results-title');focusSection(el);});
@@ -361,6 +369,6 @@ function init(){
   document.addEventListener('change',e=>{if(e.target.hasAttribute('data-chart-store')){const s=e.target.dataset.chartStore;e.target.checked?state.hiddenStores.delete(s):state.hiddenStores.add(s);renderChart();}});
   window.addEventListener('hashchange',()=>route());
   route();
-  load().catch(err=>{document.getElementById('products').innerHTML=`<div class="empty"><h3>No pudimos cargar el catálogo</h3><p>${esc(err.message)}</p><button class="secondary-button" onclick="location.reload()">Reintentar</button></div>`;document.getElementById('products').setAttribute('aria-busy','false');document.getElementById('updated').textContent='Datos no disponibles';});
+  load().catch(err=>{document.getElementById('products').innerHTML=`<div class="empty"><h3>No pudimos cargar el catálogo</h3><p>${esc(err.message)}</p><button class="secondary-button" onclick="location.reload()">Reintentar</button></div>`;document.getElementById('products').setAttribute('aria-busy','false');document.getElementById('updated').textContent='Datos no disponibles';document.getElementById('stats').textContent='Las métricas estarán disponibles cuando se pueda cargar el catálogo.';const highlights=document.getElementById('landing-highlights');highlights.innerHTML='<p class="landing-data-message">Las cifras del catálogo no están disponibles en este momento.</p>';highlights.setAttribute('aria-busy','false');});
 }
 init();

@@ -104,12 +104,21 @@ Para una vista previa local, sirve esta carpeta con `python -m http.server 8765`
 
 ## UX de la interfaz
 
-La entrada sin fragmento y `#inicio` muestran una landing independiente del catálogo.
-El botón principal abre `#catalogo`; `#como-funciona` explica el recorrido en tres pasos.
-El logo vuelve a Inicio y se mantienen los enlaces directos a palas, guardadas y tiendas.
-La portada funciona sin esperar a los JSON. Si existen ofertas disponibles en euros
-en varias tiendas, muestra una pala real con su precio mínimo registrado; si no,
-mantiene una presentación informativa sin cifras inventadas. Su diseño está en `landing.css`.
+La entrada sin fragmento y `#inicio` muestran una landing con el logo principal
+centrado y el encabezado «Explora · Compara · Elige», trasladado desde el catálogo.
+El catálogo comienza directamente por la búsqueda y conserva sus filtros y fichas.
+
+La portada muestra tres cifras clave y cuatro secciones independientes, cerradas
+inicialmente: catálogo en cifras, cómo funciona, ejemplo de comparación y transparencia.
+Los desplegables nativos admiten teclado y el enlace `#como-funciona` abre su sección.
+El resumen amplía las métricas a ocho: palas, palas en stock, ofertas, tiendas,
+palas en varias tiendas, marcas identificadas, palas con precios históricos y
+ofertas con stock disponible. Los valores proceden de los JSON publicados;
+los errores de carga se muestran como datos no disponibles, nunca como ceros.
+
+La portada no espera a los JSON para mostrarse. Conserva el ejemplo real de pala,
+las imágenes locales publicadas y las URLs externas. `landing.css` adapta el diseño
+a móvil y respeta la preferencia de movimiento reducido.
 
 La [revisión global de UX](docs/UX_REVIEW.md) documenta los criterios de plegado,
 navegación y adaptación responsive. La web continúa funcionando sin proceso de build.
