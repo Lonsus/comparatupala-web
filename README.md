@@ -127,3 +127,15 @@ Al actualizar datos desde el scraper, revisa el diff de los archivos de frontend
 el exportador también genera HTML, CSS y JavaScript y puede sobrescribir las
 mejoras específicas de este repositorio. Para actualizar solo el catálogo,
 conserva el frontend y copia únicamente los JSON exportados de `data/`.
+
+## Acabado visual y recorridos comunes
+
+`experience.css` unifica la presentación de navegación, catálogo, fichas, tiendas,
+tablas y formularios, con controles cómodos en móvil y movimiento reducido.
+`experience.js` conecta los filtros rápidos con los campos existentes: Disponibles
+activa disponibilidad y Con varias ofertas aplica `>=2` al número de ofertas.
+Ambos reflejan los cambios del formulario y la eliminación de filtros. La búsqueda
+permite borrar el texto sin perder el foco y las páginas largas ofrecen Volver arriba.
+No se cambian rutas, formatos de datos ni preferencias guardadas. Se conservan
+las vistas de fichas/lista, paginación, guardadas, comparaciones, históricos,
+secciones desplegables, imágenes alternativas, contacto y consentimiento.
