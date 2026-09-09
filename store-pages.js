@@ -127,7 +127,7 @@
 
   const style = document.createElement('link');
   style.rel = 'stylesheet';
-  style.href = 'store-pages.css?v=store-pages-1';
+  style.href = 'store-pages.css?v=store-pages-2';
   document.head.appendChild(style);
 
   const nav = document.querySelector('.topbar nav');
@@ -148,6 +148,7 @@
 
   const originalRoute = route;
   const storeFilterState = new Map();
+  let storesViewMode = 'cards';
 
   function ensureStoreView() {
     let root = document.getElementById('store-view');
@@ -271,7 +272,14 @@
           </div>
           <div class="store-independence-note"><strong>Comparador independiente</strong><span>Los datos se calculan desde las ofertas publicadas y no implican relación comercial con las tiendas.</span></div>
         </div>
-        <div class="stores-grid">
+        <div class="stores-view-toolbar">
+          <span>Vista</span>
+          <div class="stores-view-toggle" role="group" aria-label="Vista de tiendas">
+            <button type="button" data-stores-view="cards" aria-pressed="${storesViewMode === 'cards'}">Fichas</button>
+            <button type="button" data-stores-view="list" aria-pressed="${storesViewMode === 'list'}">Lista</button>
+          </div>
+        </div>
+        <div class="stores-grid ${storesViewMode === 'list' ? 'is-list' : ''}">
           ${entries.map(store => {
             const stats = storeStats(store.slug);
             return `<article class="store-card">
@@ -287,6 +295,16 @@
           }).join('')}
         </div>
       </section>`;
+
+    root.querySelectorAll('[data-stores-view]').forEach(button => button.addEventListener('click', () => {
+      const mode = button.dataset.storesView;
+      if (!['cards', 'list'].includes(mode) || mode === storesViewMode) return;
+      storesViewMode = mode;
+      root.querySelector('.stores-grid')?.classList.toggle('is-list', mode === 'list');
+      root.querySelectorAll('[data-stores-view]').forEach(item => {
+        item.setAttribute('aria-pressed', String(item.dataset.storesView === mode));
+      });
+    }));
 
     root.querySelector('.store-page-title')?.focus({preventScroll: true});
     window.scrollTo({top: 0, behavior: 'instant'});
