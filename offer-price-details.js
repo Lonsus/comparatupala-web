@@ -33,8 +33,12 @@
       .sort((left, right) => priceCents(right.price) - priceCents(left.price))[0] || null;
     const savingCents = mostExpensiveStoreOffer ? priceCents(mostExpensiveStoreOffer.price) - bestPrice : null;
     const bestSaving = Number.isFinite(savingCents) && savingCents > 0 ? savingCents / 100 : null;
-    const pvpOffer = [...bestStoreOffers, ...storeOffers].find(offer =>
-      validPrice(offer.original_price)
+    const pvpCandidates = [
+      best,
+      ...bestStoreOffers.filter(offer => String(offer.id) !== String(best.id))
+    ];
+    const pvpOffer = pvpCandidates.find(offer =>
+      validPrice(offer?.original_price)
       && priceCents(offer.original_price) > bestPrice
     ) || null;
 
@@ -43,6 +47,16 @@
 
   function isBestStoreOffer(offer, context) {
     return context.bestStoreOffers.some(candidate => String(candidate.id) === String(offer.id));
+  }
+
+  function scrollToBestOffers() {
+    const panel = document.getElementById('offers-panel');
+    if (!panel) return;
+    if (panel instanceof HTMLDetailsElement) panel.open = true;
+    panel.scrollIntoView({
+      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+      block: 'start'
+    });
   }
 
   function enhanceBestPriceHero(product) {
@@ -64,6 +78,16 @@
       const storeNames = [...new Set(context.bestStoreOffers.map(offer => storeName(offer.store)).filter(Boolean))];
       storeLine.classList.add('hero-best-stores');
       storeLine.textContent = storeNames.length ? storeNames.join(' · ') : storeName(context.best.store);
+    }
+
+    const primaryAction = box.querySelector('.primary-button');
+    if (primaryAction && context.bestStoreOffers.length > 1) {
+      const offersButton = document.createElement('button');
+      offersButton.type = 'button';
+      offersButton.className = primaryAction.className;
+      offersButton.textContent = 'Ver ofertas con mejor precio ↓';
+      offersButton.addEventListener('click', scrollToBestOffers);
+      primaryAction.replaceWith(offersButton);
     }
 
     let anchor = storeLine || priceElement;
