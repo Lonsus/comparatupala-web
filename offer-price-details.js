@@ -33,7 +33,7 @@
       .sort((left, right) => priceCents(right.price) - priceCents(left.price))[0] || null;
     const savingCents = mostExpensiveStoreOffer ? priceCents(mostExpensiveStoreOffer.price) - bestPrice : null;
     const bestSaving = Number.isFinite(savingCents) && savingCents > 0 ? savingCents / 100 : null;
-    const pvpOffer = bestStoreOffers.find(offer =>
+    const pvpOffer = [...bestStoreOffers, ...storeOffers].find(offer =>
       validPrice(offer.original_price)
       && priceCents(offer.original_price) > bestPrice
     ) || null;
