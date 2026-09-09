@@ -169,7 +169,7 @@
     if (!document.querySelector('link[data-progressive-disclosure]')) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'progressive-disclosure.css?v=3';
+      link.href = 'progressive-disclosure.css?v=4';
       link.dataset.progressiveDisclosure = 'true';
       document.head.appendChild(link);
     }
