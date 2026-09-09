@@ -28,21 +28,26 @@
       .catalog-history-trigger:hover,.catalog-history-trigger:focus-visible,.catalog-history-card.history-preview-open>.catalog-history-trigger{background:var(--green-soft);border-color:#a9dfc0;color:#08683f;box-shadow:0 5px 16px rgba(17,79,48,.14)}
       .catalog-history-card.history-preview-open>.catalog-history-overlay{opacity:1;visibility:visible;pointer-events:auto}
       .catalog-history-card .save-button{z-index:7}
-      .catalog-list-row>.catalog-history-trigger{right:16px;top:53px}
+      .catalog-list-row>.catalog-history-trigger{position:static;grid-column:5;grid-row:1;align-self:end;justify-self:end;width:31px;height:31px;min-height:31px}
+      .catalog-list-row>.catalog-history-trigger svg{width:16px;height:16px}
       .catalog-list-row .catalog-history-overlay{padding:12px 18px}
       .catalog-list-row .catalog-history-overlay-inner{grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;text-align:left}
       .catalog-list-row .catalog-history-heading{min-width:150px}
       .catalog-list-row .catalog-history-stats{gap:7px}
       .catalog-list-row .catalog-history-link{white-space:nowrap}
       .history-stats.history-stats-with-average{grid-template-columns:repeat(4,minmax(0,1fr))}
+      @media(max-width:1000px){
+        .catalog-list-row>.catalog-history-trigger{grid-column:4}
+      }
       @media(max-width:800px){
         .catalog-list-row .catalog-history-overlay-inner{grid-template-columns:1fr;gap:10px;text-align:center}
         .catalog-list-row .catalog-history-heading{min-width:0}
         .catalog-history-overlay{padding:14px}
         .catalog-history-stat{padding:8px 5px}
         .catalog-history-stat strong{font-size:16px}
-        .catalog-history-trigger,.catalog-list-row>.catalog-history-trigger{right:12px;top:50px;width:31px;height:31px;min-height:31px}
+        .catalog-history-trigger{right:12px;top:50px;width:31px;height:31px;min-height:31px}
         .catalog-history-trigger svg{width:16px;height:16px}
+        .catalog-list-row>.catalog-history-trigger{position:static;grid-column:3;grid-row:1;align-self:end;justify-self:end}
         .history-stats.history-stats-with-average{grid-template-columns:repeat(2,minmax(0,1fr))}
         .history-stats.history-stats-with-average>div:last-child{grid-column:auto}
       }
@@ -56,8 +61,9 @@
         .catalog-history-stat span{font-size:9px}
         .catalog-history-stat strong{font-size:13px}
         .catalog-history-link{font-size:11px}
-        .catalog-history-trigger,.catalog-list-row>.catalog-history-trigger{right:12px;top:49px;width:30px;height:30px;min-height:30px}
+        .catalog-history-trigger{right:12px;top:49px;width:30px;height:30px;min-height:30px}
         .catalog-history-trigger svg{width:15px;height:15px}
+        .catalog-list-row>.catalog-history-trigger{position:static;grid-column:3;grid-row:1;align-self:end;justify-self:end;width:30px;height:30px;min-height:30px}
       }
       @media(prefers-reduced-motion:reduce){.catalog-history-overlay,.catalog-history-trigger{transition:none}}
     `;
@@ -155,28 +161,6 @@
       if (!stats || !Number.isFinite(stats.average)) return;
       card.classList.add('catalog-history-card');
       card.insertAdjacentHTML('beforeend', overlayMarkup(product, stats));
-
-      const trigger = card.querySelector('[data-history-preview-toggle]');
-      let closeTimer = null;
-      const usesFinePointer = () => matchMedia('(hover:hover) and (pointer:fine)').matches;
-      const openPreview = () => {
-        clearTimeout(closeTimer);
-        closePreviews(card);
-        syncOverlayAria(card, true);
-      };
-
-      trigger?.addEventListener('pointerenter', () => {
-        if (usesFinePointer()) openPreview();
-      });
-      trigger?.addEventListener('focus', () => {
-        if (usesFinePointer()) openPreview();
-      });
-      card.addEventListener('pointerenter', () => clearTimeout(closeTimer));
-      card.addEventListener('pointerleave', () => {
-        if (!usesFinePointer()) return;
-        clearTimeout(closeTimer);
-        closeTimer = setTimeout(() => syncOverlayAria(card, false), 80);
-      });
       card.addEventListener('focusout', event => {
         if (!card.contains(event.relatedTarget)) syncOverlayAria(card, false);
       });
@@ -185,7 +169,11 @@
 
   function syncOverlayAria(card, open) {
     card.classList.toggle('history-preview-open', open);
-    card.querySelector('[data-history-preview-toggle]')?.setAttribute('aria-expanded', String(open));
+    const trigger = card.querySelector('[data-history-preview-toggle]');
+    trigger?.setAttribute('aria-expanded', String(open));
+    const productName = card.querySelector('h3 a')?.textContent?.trim() || 'esta pala';
+    trigger?.setAttribute('aria-label', `${open ? 'Ocultar' : 'Mostrar'} histórico de precios de ${productName}`);
+    trigger?.setAttribute('title', open ? 'Ocultar histórico de precios' : 'Mostrar histórico de precios');
     card.querySelector('[data-catalog-history-overlay]')?.setAttribute('aria-hidden', String(!open));
     const overlayLink = card.querySelector('.catalog-history-link');
     if (overlayLink) overlayLink.tabIndex = open ? 0 : -1;
@@ -245,8 +233,7 @@
       event.stopPropagation();
       const card = toggle.closest('.catalog-history-card');
       if (!card) return;
-      const finePointer = matchMedia('(hover:hover) and (pointer:fine)').matches;
-      const open = finePointer ? true : !card.classList.contains('history-preview-open');
+      const open = !card.classList.contains('history-preview-open');
       closePreviews(card);
       syncOverlayAria(card, open);
       return;
@@ -258,7 +245,9 @@
     if (event.key !== 'Escape') return;
     const open = document.querySelector('.catalog-history-card.history-preview-open');
     if (!open) return;
+    const trigger = open.querySelector('[data-history-preview-toggle]');
     syncOverlayAria(open, false);
+    trigger?.focus({preventScroll: true});
   });
 
   window.addEventListener('hashchange', () => {
