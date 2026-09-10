@@ -115,7 +115,7 @@ function bindImageFallback(root){
     if(img.complete&&!img.naturalWidth)fail();
   });
 }
-const saveButton = p => `<button type="button" class="save-button" data-save="${esc(p.id)}" aria-pressed="${state.saved.has(p.id)}" aria-label="${state.saved.has(p.id)?'Quitar de guardadas':'Guardar'} ${esc(p.name)}" title="Guardar en este dispositivo">${state.saved.has(p.id)?'♥':'♡'}</button>`;
+const saveButton = p => `<button type="button" class="save-button" data-save="${esc(p.id)}" aria-pressed="${state.saved.has(p.id)}" aria-label="${state.saved.has(p.id)?'Quitar de guardadas':'Guardar'} ${esc(p.name)}" title="Guardar pala">${state.saved.has(p.id)?'♥':'♡'}</button>`;
 function card(row){
   const {product:p,best,offers}=row, source=offers.find(o=>best&&o.id===best.id)||offers[0], specs=['shape','play','face'].map(k=>feature(source,k)).filter(Boolean), d=discount(best);
   const pvpSource=[best,...offers].find(o=>o&&validPrice(o.original_price)), pvp=pvpSource?.original_price;
@@ -210,7 +210,7 @@ function renderCatalog(){
   });
   const pages=Math.max(1,Math.ceil(rows.length/state.pageSize));state.page=Math.min(state.page,pages);
   const noSaved=state.savedOnly&&!state.saved.size;
-  root.innerHTML=rows.slice((state.page-1)*state.pageSize,state.page*state.pageSize).map(card).join('')||`<div class="empty"><h3>${!f.valid?'Revisa los filtros':noSaved?'Todavía no has guardado ninguna pala':state.savedOnly?'Tus guardadas no coinciden con estos filtros':'No encontramos palas con estos filtros'}</h3><p>${!f.valid?'Corrige los campos indicados o limpia los filtros para continuar.':noSaved?'Guarda las palas que te interesan pulsando el corazón. Las encontrarás aquí en este dispositivo.':'Prueba otra marca, amplía el precio o limpia la búsqueda.'}</p>${noSaved&&f.valid?'<a class="primary-button" href="#catalogo">Explorar catálogo →</a>':'<button class="secondary-button" data-reset>Limpiar filtros</button>'}</div>`;
+  root.innerHTML=rows.slice((state.page-1)*state.pageSize,state.page*state.pageSize).map(card).join('')||`<div class="empty"><h3>${!f.valid?'Revisa los filtros':noSaved?'Todavía no has guardado ninguna pala':state.savedOnly?'Tus guardadas no coinciden con estos filtros':'No encontramos palas con estos filtros'}</h3><p>${!f.valid?'Corrige los campos indicados o limpia los filtros para continuar.':noSaved?'Guarda las palas que te interesan pulsando el corazón. Las encontrarás aquí.':'Prueba otra marca, amplía el precio o limpia la búsqueda.'}</p>${noSaved&&f.valid?'<a class="primary-button" href="#catalogo">Explorar catálogo →</a>':'<button class="secondary-button" data-reset>Limpiar filtros</button>'}</div>`;
   root.setAttribute('aria-busy','false');bindImageFallback(root);
   document.getElementById('results-title').textContent=state.savedOnly?'Tus palas guardadas':'Encuentra tu pala';
   document.getElementById('result-count').textContent=`${rows.length.toLocaleString('es-ES')} palas · ${rows.reduce((n,r)=>n+r.offers.length,0).toLocaleString('es-ES')} ofertas coinciden`;
@@ -236,7 +236,27 @@ function updateFilterSummary(){
   document.getElementById('filter-summary').textContent=invalid?'Revisa los filtros':count?`${count} filtro${count===1?' activo':'s activos'}`:'Marca, precio y características';
 }
 function toast(message){const el=document.getElementById('toast');el.textContent=message;el.classList.add('show');clearTimeout(state.toastTimer);state.toastTimer=setTimeout(()=>el.classList.remove('show'),3500);}
-function toggleSaved(id){const was=state.saved.has(id);was?state.saved.delete(id):state.saved.add(id);let persisted=true;try{localStorage.setItem('comparatupala:saved',JSON.stringify([...state.saved]));}catch{persisted=false;}document.getElementById('saved-count').textContent=state.saved.size;document.querySelectorAll('[data-save]').forEach(el=>{if(el.dataset.save===id){const saved=state.saved.has(id),p=state.products.find(p=>p.id===id);el.setAttribute('aria-pressed',String(saved));el.setAttribute('aria-label',(saved?'Quitar de guardadas ':'Guardar ')+p.name);el.textContent=saved?'♥':'♡';}});if(state.savedOnly&&!state.product){const buttons=[...document.querySelectorAll('#products [data-save]')],index=buttons.findIndex(button=>button.dataset.save===id);renderCatalog();const next=document.querySelectorAll('#products [data-save]');(next[Math.min(index,next.length-1)]||document.getElementById('results-title')).focus({preventScroll:true});}toast(persisted?(was?'Pala quitada de guardadas':'Pala guardada en este dispositivo'):'Guardada solo durante esta sesión: el navegador no permite almacenamiento');}
+function refreshSaved(){
+  state.saved=window.CTPFavorites.get();
+  document.getElementById('saved-count').textContent=state.saved.size;
+  document.querySelectorAll('[data-save]').forEach(el=>{
+    const id=el.dataset.save,saved=state.saved.has(id),p=state.products.find(p=>p.id===id);
+    el.setAttribute('aria-pressed',String(saved));
+    el.setAttribute('aria-label',(saved?'Quitar de guardadas ':'Guardar ')+(p?.name||id));
+    el.textContent=saved?'♥':'♡';
+  });
+  if(state.loaded&&state.savedOnly&&!state.product)renderCatalog();
+}
+async function toggleSaved(id){
+  const buttons=[...document.querySelectorAll('#products [data-save]')];
+  const index=buttons.findIndex(button=>button.dataset.save===id);
+  const result=await window.CTPFavorites.toggle(id);
+  if(state.savedOnly&&!state.product){
+    const next=document.querySelectorAll('#products [data-save]');
+    (next[Math.max(0,Math.min(index,next.length-1))]||document.getElementById('results-title')).focus({preventScroll:true});
+  }
+  if(result?.message)toast(result.message);
+}
 function resetFilters(){document.getElementById('filters').reset();document.getElementById('search').value='';state.page=1;renderCatalog();}
 function route(){
   const home=!location.hash||location.hash==='#inicio'||location.hash==='#como-funciona';
@@ -337,7 +357,7 @@ async function load(){
   const [products,history,stats]=await Promise.all(['products','history','stats'].map(n=>get('data/'+n+'.json')));
   if(!Array.isArray(products)||!stats||typeof history!=='object')throw new Error('Formato de catálogo no válido');
   Object.assign(state,{products,history,stats});
-  try{const saved=JSON.parse(localStorage.getItem('comparatupala:saved')||'[]');if(Array.isArray(saved))state.saved=new Set(saved.filter(id=>products.some(p=>p.id===id)));}catch{}
+  state.saved=window.CTPFavorites.get();
   document.getElementById('saved-count').textContent=state.saved.size;
   populate('store',stats.stores.map(s=>[s,storeName(s)]));populate('brand',products.map(p=>[norm(p.brand),p.brand||'']));
   for(const k of ['shape','level','play'])populate(k,products.flatMap(p=>p.offers.map(o=>{const v=feature(o,k);return [norm(v),v];})));
@@ -348,6 +368,7 @@ async function load(){
   route();
 }
 function init(){
+  window.CTPFavorites.subscribe(refreshSaved);
   const compact=matchMedia('(max-width:800px)');
   setFiltersExpanded(!compact.matches);
   document.getElementById('filter-toggle').addEventListener('click',e=>setFiltersExpanded(e.currentTarget.getAttribute('aria-expanded')!=='true'));
