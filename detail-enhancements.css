@@ -69,3 +69,27 @@
   .panel-toggle{flex-basis:34px;width:34px;height:34px}
   .comparison-controls{padding:12px}
 }
+
+/* Keep catalog history prices inside their own stat cards at every card width.
+   The overlay acts as the sizing container so typography follows the card,
+   not the viewport resolution. */
+.professional-ui .catalog-history-card .catalog-history-overlay{
+  container-type:inline-size;
+}
+.professional-ui .catalog-history-card:not(.catalog-list-row) .catalog-history-stats{
+  gap:5px;
+  gap:clamp(3px,1.6cqw,8px);
+}
+.professional-ui .catalog-history-card:not(.catalog-list-row) .catalog-history-stat{
+  padding-inline:3px;
+  padding-inline:clamp(2px,1.5cqw,7px);
+}
+.professional-ui .catalog-history-card:not(.catalog-list-row) .catalog-history-stat strong{
+  font-size:11px;
+  font-size:clamp(10px,5.2cqw,20px);
+  line-height:1.1;
+  letter-spacing:-.02em;
+  white-space:nowrap;
+  overflow-wrap:normal;
+  word-break:normal;
+}
