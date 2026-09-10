@@ -4,7 +4,18 @@ Repositorio público del dashboard estático de **ComparaTuPala.es**.
 
 El scraper, la base SQLite, logs y credenciales permanecen en el repositorio privado `Lonsus/padel-scraper`. Este repositorio contiene únicamente el frontend público y los JSON exportados.
 
-## Actualizar los datos
+## Usuarios y favoritas con Supabase (opcional)
+
+La primera fase incorpora registro/login por email, perfiles privados y favoritas
+sincronizadas, sin mover el catálogo JSON. Consulta la
+[guía de configuración y validación](docs/supabase-setup.md). Con los placeholders
+actuales la web sigue funcionando en modo local.
+
+**Al exportar datos:** el exportador puede sobrescribir `index.html` y `app.js`.
+Conserva los cambios de integración de esta rama; revisa el diff y publica solo
+datos/imágenes o adapta el exportador antes de volver a generar el frontend.
+
+## Actualizar los datos del catálogo
 
 Desde el clon local de `padel-scraper`:
 
