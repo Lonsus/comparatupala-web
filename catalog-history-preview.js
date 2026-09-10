@@ -20,6 +20,8 @@
   let scheduled = false;
   let historyHashHandled = '';
 
+  const historyIcon = () => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>`;
+
   function ensureStyles() {
     if (document.getElementById(STYLE_ID)) return;
     const style = document.createElement('style');
@@ -49,6 +51,10 @@
       .catalog-list-row .catalog-history-stats{gap:7px}
       .catalog-list-row .catalog-history-link{white-space:nowrap}
       .history-stats.history-stats-with-average{grid-template-columns:repeat(4,minmax(0,1fr))}
+      .detail-actions{flex-wrap:wrap;justify-content:flex-end}
+      .detail-history-trigger{display:inline-grid;place-items:center;flex:0 0 44px;width:44px;height:44px;min-width:44px;min-height:44px;padding:0;border:1px solid var(--line);border-radius:50%;background:#fff;color:#667b6c;box-shadow:none;transition:background .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease}
+      .detail-history-trigger svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+      .detail-history-trigger:hover,.detail-history-trigger:focus-visible,.detail-history-trigger[aria-expanded="true"]{background:var(--green-soft);border-color:#abe3c3;color:var(--green-dark);box-shadow:0 4px 14px rgba(17,79,48,.1)}
       @media(max-width:1000px){
         .catalog-list-row>.catalog-history-trigger{grid-column:4}
       }
@@ -77,8 +83,16 @@
         .catalog-history-trigger{right:12px;top:49px;width:30px;height:30px;min-height:30px}
         .catalog-history-trigger svg{width:15px;height:15px}
         .catalog-list-row>.catalog-history-trigger{position:static;grid-column:3;grid-row:1;align-self:end;justify-self:end;width:30px;height:30px;min-height:30px}
+        .breadcrumb{align-items:flex-start}
+        .detail-actions{margin-left:auto;flex-wrap:nowrap;gap:8px}
+        .detail-actions .secondary-button{min-height:44px;white-space:nowrap}
       }
-      @media(prefers-reduced-motion:reduce){.catalog-history-overlay,.catalog-history-trigger{transition:none}}
+      @media(max-width:430px){
+        .breadcrumb{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+        .detail-actions{display:grid;grid-template-columns:minmax(0,1fr) 44px 44px;width:100%;margin-left:0;gap:8px}
+        .detail-actions .secondary-button{width:100%;min-width:0}
+      }
+      @media(prefers-reduced-motion:reduce){.catalog-history-overlay,.catalog-history-trigger,.detail-history-trigger{transition:none}}
     `;
     document.head.appendChild(style);
   }
@@ -159,7 +173,7 @@
         </div>
         <a class="catalog-history-link" href="${href}" tabindex="-1">Ver histórico →</a>
       </div>
-    </div><button type="button" class="catalog-history-trigger" data-history-preview-toggle aria-expanded="false" aria-label="Mostrar histórico de precios de ${esc(product.name)}" title="Mostrar histórico de precios"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></button>`;
+    </div><button type="button" class="catalog-history-trigger" data-history-preview-toggle aria-expanded="false" aria-label="Mostrar histórico de precios de ${esc(product.name)}" title="Mostrar histórico de precios">${historyIcon()}</button>`;
   }
 
   function enhanceCards() {
@@ -193,6 +207,42 @@
     document.querySelectorAll('.catalog-history-card.history-preview-open').forEach(card => {
       if (card !== except) syncOverlayAria(card, false);
     });
+  }
+
+  function syncDetailHistoryButton(button, panel, product) {
+    if (!button || !(panel instanceof HTMLDetailsElement)) return;
+    const open = panel.open;
+    const productName = product?.name || 'esta pala';
+    button.setAttribute('aria-expanded', String(open));
+    button.setAttribute('aria-label', `${open ? 'Ocultar' : 'Mostrar'} histórico de precios de ${productName}`);
+    button.setAttribute('title', open ? 'Ocultar histórico de precios' : 'Mostrar histórico de precios');
+  }
+
+  function enhanceProductDetail() {
+    const root = document.getElementById('product-view');
+    const product = state?.product;
+    if (!root || root.hidden || !product) return;
+    const actions = root.querySelector('.detail-actions');
+    const panel = document.getElementById('history-panel');
+    if (!actions || !(panel instanceof HTMLDetailsElement)) return;
+
+    let button = actions.querySelector('[data-detail-history-toggle]');
+    if (!button) {
+      button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'detail-history-trigger';
+      button.dataset.detailHistoryToggle = 'true';
+      button.setAttribute('aria-controls', 'history-panel');
+      button.innerHTML = historyIcon();
+
+      const save = actions.querySelector('.save-button');
+      if (save) save.insertAdjacentElement('afterend', button);
+      else actions.appendChild(button);
+
+      panel.addEventListener('toggle', () => syncDetailHistoryButton(button, panel, state?.product));
+    }
+
+    syncDetailHistoryButton(button, panel, product);
   }
 
   function decorateHistoryAverage() {
@@ -231,12 +281,30 @@
       scheduled = false;
       ensureStyles();
       enhanceCards();
+      enhanceProductDetail();
       decorateHistoryAverage();
       openHistoryFromHash();
     });
   }
 
   document.addEventListener('click', event => {
+    const detailToggle = event.target.closest('[data-detail-history-toggle]');
+    if (detailToggle) {
+      event.preventDefault();
+      event.stopPropagation();
+      const panel = document.getElementById('history-panel');
+      if (!(panel instanceof HTMLDetailsElement)) return;
+      const opening = !panel.open;
+      panel.open = opening;
+      syncDetailHistoryButton(detailToggle, panel, state?.product);
+      if (opening) {
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          panel.scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start'});
+        }));
+      }
+      return;
+    }
+
     const toggle = event.target.closest('[data-history-preview-toggle]');
     if (toggle) {
       event.preventDefault();
