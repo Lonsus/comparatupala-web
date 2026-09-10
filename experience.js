@@ -57,7 +57,7 @@
 (() => {
   if (document.querySelector('script[data-padelful-source]')) return;
   const script = document.createElement('script');
-  script.src = 'padelful-source.js?v=1';
+  script.src = 'padelful-source.js?v=2';
   script.async = false;
   script.dataset.padelfulSource = 'true';
   document.body.appendChild(script);
