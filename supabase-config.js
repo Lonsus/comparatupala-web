@@ -1,8 +1,8 @@
 'use strict';
 // Public frontend settings only. See docs/supabase-setup.md before enabling.
 window.COMPARATUPALA_SUPABASE = window.COMPARATUPALA_SUPABASE || {
-  url: 'https://YOUR_PROJECT.supabase.co',
-  publishableKey: 'sb_publishable_YOUR_PUBLISHABLE_KEY'
+  url: 'https://tmvyidpxvlsimttcdckr.supabase.co',
+  publishableKey: 'sb_publishable_XRUcPQGeU-0UPRMSSCODBg_5IQ2Fx1n'
 };
 
 window.comparatupalaSupabaseReady = (async () => {

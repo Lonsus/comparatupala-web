@@ -9,7 +9,9 @@ El scraper, la base SQLite, logs y credenciales permanecen en el repositorio pri
 La primera fase incorpora registro/login por email, perfiles privados y favoritas
 sincronizadas, sin mover el catálogo JSON. Consulta la
 [guía de configuración y validación](docs/supabase-setup.md). Con los placeholders
-actuales la web sigue funcionando en modo local.
+vacíos la web sigue funcionando en modo local. La rama contiene ahora la
+configuración pública del proyecto `comparatupala`; véase su
+[estado de activación](docs/supabase-activation.md).
 
 **Al exportar datos:** el exportador puede sobrescribir `index.html` y `app.js`.
 Conserva los cambios de integración de esta rama; revisa el diff y publica solo

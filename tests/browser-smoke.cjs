@@ -74,6 +74,7 @@ function installFake({ initialSession = false } = {}) {
     page.on('pageerror', error => errors.push(error.message));
     page.on('request', request => requests.push(request.url()));
     await page.addInitScript(id => {
+      window.COMPARATUPALA_SUPABASE = { url: '', publishableKey: '' };
       if (!localStorage.getItem('test-seeded')) {
         localStorage.setItem('comparatupala:saved', JSON.stringify([id]));
         localStorage.setItem('test-seeded', 'yes');

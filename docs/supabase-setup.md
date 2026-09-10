@@ -1,5 +1,9 @@
 # Supabase: usuarios, perfiles y favoritas (fase 1)
 
+El proyecto ya está creado y conectado en esta rama. Consulta el
+[estado de activación](supabase-activation.md) antes de ejecutar esta guía:
+la migración ya está aplicada y no debe repetirse.
+
 El catálogo sigue leyendo `data/products.json`, `data/history.json` y
 `data/stats.json`. No se crean tablas de productos ni se conecta el scraper.
 La web funciona sin configurar Supabase: el SDK ni siquiera se descarga con los
