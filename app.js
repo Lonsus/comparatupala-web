@@ -76,6 +76,14 @@ function productMatch(p,f){
   const scoped=p.offers.filter(o=>!f.store||o.store===f.store);
   if(!scoped.length) return null;
   if(f.availability==='unavailable' && scoped.some(available)) return null;
+  const priceEligible=scoped.filter(o=>{
+    if(f.availability==='available'&&!available(o)) return false;
+    if(f.availability==='unavailable'&&available(o)) return false;
+    if((f.min!==null||f.max!==null)&&(!available(o)||!validPrice(o.price))) return false;
+    if(f.min!==null&&Number(o.price)<f.min) return false;
+    if(f.max!==null&&Number(o.price)>f.max) return false;
+    return true;
+  });
   const eligible=scoped.filter(o=>{
     if(f.availability==='available'&&!available(o)) return false;
     if(f.q&&!norm([p.name,p.brand,p.ean,o.ean,o.reference,o.sku,o.name,...featureEntries(o).flat()].join(' ')).includes(f.q)) return false;
@@ -85,7 +93,7 @@ function productMatch(p,f){
     if(f.max!==null&&Number(o.price)>f.max) return false;
     return true;
   });
-  return eligible.length?{product:p,offers:eligible,best:bestOffer(eligible)}:null;
+  return eligible.length?{product:p,offers:eligible,best:bestOffer(priceEligible)}:null;
 }
 function productImage(p,detail=false){
   const offers=p.offers||[];
@@ -109,7 +117,7 @@ function bindImageFallback(root){
 }
 const saveButton = p => `<button type="button" class="save-button" data-save="${esc(p.id)}" aria-pressed="${state.saved.has(p.id)}" aria-label="${state.saved.has(p.id)?'Quitar de guardadas':'Guardar'} ${esc(p.name)}" title="Guardar en este dispositivo">${state.saved.has(p.id)?'♥':'♡'}</button>`;
 function card(row){
-  const {product:p,best,offers}=row, source=best||offers[0], specs=['shape','play','face'].map(k=>feature(source,k)).filter(Boolean), d=discount(best);
+  const {product:p,best,offers}=row, source=offers.find(o=>best&&o.id===best.id)||offers[0], specs=['shape','play','face'].map(k=>feature(source,k)).filter(Boolean), d=discount(best);
   const pvpSource=[best,...offers].find(o=>o&&validPrice(o.original_price)), pvp=pvpSource?.original_price;
   const href='#pala/'+encodeURIComponent(p.id);
   return `<article class="card"><div class="card-visual">${d?`<span class="discount-badge">−${d}% sobre PVP</span>`:''}${saveButton(p)}<a href="${href}" tabindex="-1" aria-hidden="true">${productImage({...p,image_url:source.image_url||p.image_url})}</a></div><div class="card-body"><p class="brand">${esc(p.brand||'Marca sin indicar')}</p><h3><a href="${href}">${esc(p.name)}</a></h3><div class="feature-tags">${specs.map(v=>`<span>${esc(v)}</span>`).join('')}</div><p class="source-caption">${specs.length?'Ficha: '+esc(storeName(source.store)):'Características pendientes'}</p><div class="card-price"><div><small>${best?'Mejor precio disponible':'Sin oferta disponible'}</small><strong>${money(best?.price,best?.currency)}</strong>${validPrice(pvp)?`<span class="card-pvp">PVP ${money(pvp,pvpSource?.currency||best?.currency)}</span>`:''}</div><span class="store-name">${best?esc(storeName(best.store)):'Consulta las tiendas'}</span></div></div><div class="card-footer"><span class="store-dots">${p.stores.map(dot).join('')}${p.stores.length} tienda${p.stores.length===1?'':'s'}</span><a href="${href}">Comparar →</a></div></article>`;
