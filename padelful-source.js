@@ -16,7 +16,6 @@
   `;
   document.head.appendChild(style);
 
-  const originalProductMatch = productMatch;
   productMatch = function productMatchWithSources(p, f) {
     if (f.brand && norm(p.brand) !== f.brand) return null;
     const count = Number.isFinite(Number(p.offer_count)) ? Number(p.offer_count) : commercialOffers(p).length;
@@ -46,9 +45,10 @@
     return html;
   };
 
-  renderOffers = function renderOffersWithInformation(p) {
-    const best = bestOffer(p.offers);
-    return p.offers.map(o => {
+  renderOffers = function renderOffersWithInformation(product) {
+    const best = bestOffer(product.offers);
+    const bestCurrency = best?.currency || 'EUR';
+    return product.offers.map(o => {
       if (isInformationSource(o)) {
         const checked = o.last_successful_check || o.last_checked;
         const rating = o.source_rating !== null && o.source_rating !== undefined && o.source_rating !== ''
@@ -61,15 +61,13 @@
           <div class="offer-actions"><button class="text-button" data-spec-offer="${esc(o.id)}">Ver características</button>${externalLink(o.url,'Ver ficha en Padelful ↗')}</div>
         </article>`;
       }
-      return `<article class="offer-row ${best?.id===o.id?'best-offer':''}"><div class="offer-store-block"><div class="offer-store">${dot(o.store)}${storeLabel(o.store)}</div>${renderExternalRating(o)}<p class="offer-info">${best?.id===o.id?'Mejor precio disponible · ':''}${esc(availabilityLabel(o))}</p></div><div class="offer-price">${money(o.price,o.currency)}${validPrice(o.original_price)&&validPrice(o.price)&&Number(o.original_price)>Number(o.price)?`<span class="offer-original">PVP <s>${money(o.original_price,o.currency)}</s> · −${discount(o)}%</span>`:''}</div><div class="offer-ean">EAN: ${esc(o.ean||'No publicado')}<br>Última lectura correcta: ${esc(date(o.last_successful_check||(!isError(o)?o.last_checked:null),true))}</div><span class="badge ${available(o)?'positive':'warning'}">${available(o)?'En stock':'Sin stock confirmado'}</span><div class="offer-actions"><button class="text-button" data-spec-offer="${esc(o.id)}">Ver características</button>${externalLink(o.url,'Ir a la tienda ↗')}</div></article>`;
+      const offerCurrency = o.currency || 'EUR';
+      const delta = best && o.id !== best.id && offerCurrency === bestCurrency && validPrice(o.price) && validPrice(best.price)
+        ? Number(o.price) - Number(best.price) : null;
+      const deltaMarkup = Number.isFinite(delta) && delta > 0
+        ? `<span class="offer-delta">+${money(delta,offerCurrency)} frente al mejor precio</span>` : '';
+      return `<article class="offer-row ${best?.id===o.id?'best-offer':''}"><div class="offer-store-block"><div class="offer-store">${dot(o.store)}${storeLabel(o.store)}</div>${renderExternalRating(o)}<p class="offer-info">${best?.id===o.id?'Mejor precio disponible · ':''}${esc(availabilityLabel(o))}</p></div><div class="offer-price">${money(o.price,o.currency)}${validPrice(o.original_price)&&validPrice(o.price)&&Number(o.original_price)>Number(o.price)?`<span class="offer-original">PVP <s>${money(o.original_price,o.currency)}</s> · −${discount(o)}%</span>`:''}${deltaMarkup}</div><div class="offer-ean">EAN: ${esc(o.ean||'No publicado')}<br>Última lectura correcta: ${esc(date(o.last_successful_check||(!isError(o)?o.last_checked:null),true))}</div><span class="badge ${available(o)?'positive':'warning'}">${available(o)?'En stock':'Sin stock confirmado'}</span><div class="offer-actions"><button class="text-button" data-spec-offer="${esc(o.id)}">Ver características</button>${externalLink(o.url,'Ir a la tienda ↗')}</div></article>`;
     }).join('');
-  };
-
-  renderComparison = function renderComparisonWithSources(p) {
-    if (p.offers.length < 2) return '';
-    const rows = comparisonRows(p.offers);
-    if (!rows.length) return '';
-    return `<details class="comparison"><summary>Comparar características entre fuentes</summary><p>Se comparan los valores publicados por tiendas y fuentes informativas. «No publicado» indica que esa fuente no aporta el dato.</p><div class="table-wrap"><table class="comparison-table"><thead><tr><th scope="col">Característica</th>${p.offers.map(o=>`<th scope="col">${esc(storeName(o.store))}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr class="${new Set(r.values.filter(v=>v!==null).map(norm)).size>1?'different':''}"><th scope="row">${esc(r.label)}</th>${r.values.map(v=>`<td>${esc(v??'No publicado')}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>`;
   };
 
   const originalRenderProduct = renderProduct;
@@ -83,24 +81,69 @@
     const eans = [...new Set([p.ean,...(p.offers||[]).map(o=>o.ean)].filter(Boolean))];
     const meta = root.querySelector('.product-meta');
     if (meta) meta.innerHTML = `${storesCount} tienda${storesCount===1?'':'s'} asociada${storesCount===1?'':'s'} · ${offersCount} oferta${offersCount===1?'':'s'}${infoCount?` · ${infoCount} fuente informativa`:''}<br>EAN: ${eans.length?eans.map(esc).join(' · '):'No publicado'}`;
-    const firstNav = root.querySelector('.detail-nav [data-scroll="offers-panel"]');
-    if (firstNav) firstNav.textContent = `Ofertas y fuentes (${offersCount + infoCount})`;
-    const offersPanel = root.querySelector('#offers-panel .panel-heading');
-    if (offersPanel) {
-      const eyebrow = offersPanel.querySelector('.eyebrow'); if (eyebrow) eyebrow.textContent = 'DÓNDE COMPRAR · OTRAS FUENTES';
-      const heading = offersPanel.querySelector('h2'); if (heading) heading.textContent = 'Ofertas y fuentes de información';
-      const copy = offersPanel.querySelector('p:not(.eyebrow)'); if (copy) copy.textContent = 'Compara precios de tiendas y consulta fuentes descriptivas como Padelful.';
+
+    const offersNav = root.querySelector('.detail-nav [data-scroll="offers-panel"]');
+    if (offersNav) offersNav.textContent = `Ofertas y fuentes (${offersCount + infoCount})`;
+    const comparisonNav = root.querySelector('.detail-nav [data-scroll="comparison-panel"]');
+    if (comparisonNav) comparisonNav.textContent = 'Comparar fuentes';
+
+    const offersSummary = root.querySelector('#offers-panel .panel-summary-copy');
+    if (offersSummary) {
+      const eyebrow = offersSummary.querySelector('.eyebrow'); if (eyebrow) eyebrow.textContent = 'DÓNDE COMPRAR · OTRAS FUENTES';
+      const heading = offersSummary.querySelector('.panel-summary-title'); if (heading) heading.textContent = 'Ofertas y fuentes de información';
+      const copy = offersSummary.querySelector('.panel-summary-description'); if (copy) copy.textContent = `${offersCount} ofertas comerciales · ${infoCount} fuentes informativas.`;
     }
-    const specsPanel = root.querySelector('#specs-panel .panel-heading');
-    if (specsPanel) {
-      const heading = specsPanel.querySelector('h2'); if (heading) heading.textContent = 'Su ficha, fuente a fuente';
-      const copy = specsPanel.querySelector('p:not(.eyebrow)'); if (copy) copy.textContent = 'Elige una tienda o fuente informativa para comparar sus características.';
+    const specsSummary = root.querySelector('#specs-panel .panel-summary-copy');
+    if (specsSummary) {
+      const heading = specsSummary.querySelector('.panel-summary-title'); if (heading) heading.textContent = 'Su ficha, fuente a fuente';
+      const copy = specsSummary.querySelector('.panel-summary-description'); if (copy) copy.textContent = 'Elige una tienda o fuente informativa para ver sus características.';
     }
+    const comparisonSummary = root.querySelector('#comparison-panel .panel-summary-copy');
+    if (comparisonSummary) {
+      const heading = comparisonSummary.querySelector('.panel-summary-title'); if (heading) heading.textContent = 'Comparar características entre fuentes';
+      const copy = comparisonSummary.querySelector('.panel-summary-description'); if (copy) copy.textContent = 'Selecciona tiendas y fuentes informativas para detectar diferencias entre sus fichas.';
+    }
+    root.querySelectorAll('.comparison-selection-status span').forEach(node => {
+      if (node.textContent.includes('tiendas')) node.textContent = 'Selecciona las fuentes que quieres comparar.';
+    });
+    root.querySelectorAll('.source-caption').forEach(node => {
+      if (node.textContent.includes('tienda no aporta')) node.textContent = '«No publicado» indica que esa fuente no aporta el dato en su ficha.';
+    });
+
     if (!bestOffer(p.offers) && infoCount) {
       const box = root.querySelector('.buy-box');
       if (box) box.innerHTML = `<div><p class="eyebrow">SIN OFERTAS COMERCIALES</p><div class="hero-price">Ficha disponible</div><p>Consulta las características publicadas por Padelful.</p></div><small>Esta pala todavía no tiene una oferta de compra monitorizada por ComparaTuPala.</small>`;
     }
   };
+
+  function polishTopbarCount() {
+    const note = document.querySelector('.topbar-note');
+    if (!note || !stores.padelful) return;
+    const commercial = Object.values(stores).filter(store => store?.slug && store.active !== false && store.slug !== 'padelful').length;
+    const wanted = `${commercial.toLocaleString('es-ES')} tiendas + Padelful como fuente informativa.`;
+    if (note.textContent.trim() !== wanted) note.textContent = wanted;
+  }
+
+  function polishStoresIndex() {
+    if (location.hash !== '#tiendas') return;
+    const root = document.getElementById('store-view');
+    if (!root || root.hidden) return;
+    const heading = root.querySelector('.stores-heading');
+    if (heading) {
+      const eyebrow = heading.querySelector('.eyebrow'); if (eyebrow) eyebrow.textContent = 'TIENDAS Y FUENTES MONITORIZADAS';
+      const title = heading.querySelector('h1'); if (title) title.textContent = 'Tiendas y fuentes';
+      const copy = heading.querySelector('.muted'); if (copy) copy.textContent = 'Explora tiendas con precios y disponibilidad, además de fuentes informativas como Padelful.';
+    }
+    root.querySelectorAll('.store-card').forEach(card => {
+      if (card.querySelector('h2')?.textContent.trim() !== 'Padelful') return;
+      const eyebrow = card.querySelector('.eyebrow'); if (eyebrow) eyebrow.textContent = 'FUENTE INFORMATIVA';
+      const metrics = card.querySelectorAll('.store-card-metrics > div');
+      if (metrics[0]) metrics[0].querySelector('dt').textContent = 'Palas documentadas';
+      if (metrics[1]) { metrics[1].querySelector('dt').textContent = 'Fichas disponibles'; metrics[1].querySelector('dd').textContent = metrics[0]?.querySelector('dd')?.textContent || '0'; }
+      if (metrics[2]) metrics[2].querySelector('dt').textContent = 'Registros informativos';
+      const link = card.querySelector('.store-card-link'); if (link) link.textContent = 'Ver fuente →';
+    });
+  }
 
   function polishPadelfulStorePage() {
     const root = document.getElementById('store-view');
@@ -115,9 +158,11 @@
       if (node.textContent.includes('CATÁLOGO DE PADELFUL')) node.textContent = 'PALAS DOCUMENTADAS POR PADELFUL';
     });
     const title = root.querySelector('#store-catalog-title');
-    if (title && title.textContent !== 'Palas con información de Padelful') title.textContent = 'Palas con información de Padelful';
+    if (title) title.textContent = 'Palas con información de Padelful';
     const independent = root.querySelector('.store-independent-copy');
     if (independent) independent.textContent = 'Padelful se muestra como fuente informativa para aportar características y contexto. No se contabiliza como tienda comercial ni como oferta de compra.';
+    const actionSmall = root.querySelector('.store-hero-action small');
+    if (actionSmall) actionSmall.textContent = 'La ficha enlazada pertenece a Padelful. ComparaTuPala no atribuye a Padelful una oferta de compra propia.';
     const availabilitySelect = root.querySelector('#store-availability');
     if (availabilitySelect && availabilitySelect.value === 'available' && availabilitySelect.dataset.padelfulAdjusted !== 'true') {
       availabilitySelect.dataset.padelfulAdjusted = 'true';
@@ -129,17 +174,34 @@
       const small = block.querySelector('small'); if (small) small.textContent = 'Fuente informativa';
       const strong = block.querySelector('strong'); if (strong) strong.textContent = 'Sin precio de compra';
     });
-    root.querySelectorAll('.store-card-link').forEach(link => { if (link.getAttribute('href') === '#tienda/padelful') link.textContent = 'Ver fuente →'; });
+    const statLabels = root.querySelectorAll('.store-stats span');
+    statLabels.forEach(label => {
+      if (label.textContent === 'Ofertas monitorizadas') label.textContent = 'Fichas informativas';
+      if (label.textContent === 'Ofertas disponibles') label.textContent = 'Ofertas comerciales';
+      if (label.textContent === 'Ofertas agotadas') label.textContent = 'Stock comercial';
+      if (label.textContent === 'Precio medio disponible') label.textContent = 'Precio propio';
+      if (label.textContent === 'Descuento medio') label.textContent = 'Descuento propio';
+      if (label.textContent === 'Mayor descuento') label.textContent = 'Mayor descuento propio';
+      if (label.textContent === 'Última lectura correcta') label.textContent = 'Última actualización';
+    });
   }
 
-  const storeRoot = document.getElementById('store-view');
-  if (storeRoot) new MutationObserver(polishPadelfulStorePage).observe(storeRoot,{childList:true,subtree:true});
-  window.addEventListener('hashchange', () => requestAnimationFrame(polishPadelfulStorePage));
+  function polishSources() {
+    polishTopbarCount();
+    polishStoresIndex();
+    polishPadelfulStorePage();
+  }
+
+  const main = document.getElementById('main');
+  if (main) new MutationObserver(() => requestAnimationFrame(polishSources)).observe(main,{childList:true,subtree:true});
+  const topbarNote = document.querySelector('.topbar-note');
+  if (topbarNote) new MutationObserver(polishTopbarCount).observe(topbarNote,{childList:true,characterData:true,subtree:true});
+  window.addEventListener('hashchange', () => requestAnimationFrame(polishSources));
   queueMicrotask(() => {
     if (state.loaded) {
       if (state.product) renderProduct(state.product);
       else renderCatalog();
     }
-    polishPadelfulStorePage();
+    polishSources();
   });
 })();
