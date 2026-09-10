@@ -5,12 +5,17 @@
   const commercialOffers = product => (product?.offers || []).filter(offer => !isInformationSource(offer));
   const informationOffers = product => (product?.offers || []).filter(isInformationSource);
   const commercialStores = product => [...new Set(commercialOffers(product).map(offer => offer.store).filter(Boolean))];
+  const hasExternalHistory = offer => isInformationSource(offer)
+    && Array.isArray(state.history?.[String(offer.id)])
+    && state.history[String(offer.id)].some(point => validPrice(point?.price));
 
   const style = document.createElement('style');
   style.textContent = `
     .offer-row.information-source{border-color:#c7d2fe;background:linear-gradient(135deg,#f8faff,#eef2ff)}
     .offer-row.information-source .offer-store{font-weight:800}.source-badge{display:inline-flex;align-items:center;gap:.35rem;border-radius:999px;padding:.28rem .58rem;background:#e0e7ff;color:#3730a3;font-size:.75rem;font-weight:800}
     .information-source .offer-price strong,.information-source .source-price-label{color:#3730a3}.information-source-note{margin:.25rem 0 0;color:#596579;font-size:.82rem}
+    .external-history-note{margin:.65rem 0 0;padding:.65rem .8rem;border-left:3px solid #6366f1;background:#f5f7ff;color:#414b63;font-size:.86rem}
+    .chart-legend .external-source-legend{font-weight:700}
     #store-view.padelful-source-view .store-price-fields{display:none}#store-view.padelful-source-view .store-independent-copy{max-width:70ch}
     #store-view.padelful-source-view .store-card-dot,#store-view.padelful-source-view .store-identity-dot{filter:saturate(.75)}
   `;
@@ -40,7 +45,8 @@
     let html = originalCard(row);
     const storeCount = [...new Set((row.offers || []).filter(o => !isInformationSource(o)).map(o => o.store).filter(Boolean))].length;
     const sourceCount = (row.offers || []).filter(isInformationSource).length;
-    const label = `${storeCount} tienda${storeCount === 1 ? '' : 's'} para comparar${sourceCount ? ` · ${sourceCount} fuente informativa` : ''}`;
+    const historyCount = (row.offers || []).filter(hasExternalHistory).length;
+    const label = `${storeCount} tienda${storeCount === 1 ? '' : 's'} para comparar${sourceCount ? ` · ${sourceCount} fuente informativa` : ''}${historyCount ? ' · histórico externo' : ''}`;
     html = html.replace(/<p class="card-compare-meta">[\s\S]*?<\/p>/, `<p class="card-compare-meta">${esc(label)}</p>`);
     return html;
   };
@@ -53,8 +59,12 @@
         const checked = o.last_successful_check || o.last_checked;
         const rating = o.source_rating !== null && o.source_rating !== undefined && o.source_rating !== ''
           ? `<p class="information-source-note">Valoración Padelful: <strong>${esc(o.source_rating)}</strong></p>` : '';
+        const history = state.history?.[String(o.id)] || [];
+        const historyText = history.length
+          ? `<p class="information-source-note">Histórico externo: <strong>${history.length.toLocaleString('es-ES')}</strong> cambios de precio en EUR</p>`
+          : '<p class="information-source-note">Histórico externo no disponible en el export actual.</p>';
         return `<article class="offer-row information-source">
-          <div class="offer-store-block"><div class="offer-store">${dot(o.store)}${storeLabel(o.store)}</div><span class="source-badge">Fuente informativa</span>${rating}<p class="offer-info">Ficha técnica y datos descriptivos. No es una oferta de compra.</p></div>
+          <div class="offer-store-block"><div class="offer-store">${dot(o.store)}${storeLabel(o.store)}</div><span class="source-badge">Fuente informativa</span>${rating}${historyText}<p class="offer-info">Ficha técnica y datos descriptivos. No es una oferta de compra.</p></div>
           <div class="offer-price"><span class="source-price-label">Sin precio de compra</span>${validPrice(o.original_price) ? `<span class="offer-original">PVP informativo ${money(o.original_price,o.currency)}</span>` : ''}</div>
           <div class="offer-ean">EAN: ${esc(o.ean || 'No publicado')}<br>Datos actualizados: ${esc(date(checked,true))}</div>
           <span class="badge positive">Datos disponibles</span>
@@ -70,6 +80,24 @@
     }).join('');
   };
 
+  const originalRenderChart = renderChart;
+  renderChart = function renderChartWithExternalSources() {
+    originalRenderChart();
+    const root = document.getElementById('history-panel');
+    if (!root || !state.product) return;
+    const infoHistory = informationOffers(state.product).filter(hasExternalHistory);
+    if (!infoHistory.length) return;
+    const tableHeader = root.querySelector('#history-records thead th:nth-child(2)');
+    if (tableHeader) tableHeader.textContent = 'Tienda / fuente';
+    const summary = root.querySelector('#history-records summary');
+    if (summary && !summary.textContent.includes('incluye histórico externo')) {
+      summary.textContent += ' · incluye histórico externo';
+    }
+    root.querySelectorAll('.chart-legend span').forEach(node => {
+      if (node.textContent.trim().includes('Padelful')) node.classList.add('external-source-legend');
+    });
+  };
+
   const originalRenderProduct = renderProduct;
   renderProduct = function renderProductWithSources(p) {
     originalRenderProduct(p);
@@ -77,10 +105,12 @@
     if (!root) return;
     const storesCount = commercialStores(p).length;
     const offersCount = Number.isFinite(Number(p.offer_count)) ? Number(p.offer_count) : commercialOffers(p).length;
-    const infoCount = informationOffers(p).length;
+    const infoOffers = informationOffers(p);
+    const infoCount = infoOffers.length;
+    const historySources = infoOffers.filter(hasExternalHistory);
     const eans = [...new Set([p.ean,...(p.offers||[]).map(o=>o.ean)].filter(Boolean))];
     const meta = root.querySelector('.product-meta');
-    if (meta) meta.innerHTML = `${storesCount} tienda${storesCount===1?'':'s'} asociada${storesCount===1?'':'s'} · ${offersCount} oferta${offersCount===1?'':'s'}${infoCount?` · ${infoCount} fuente informativa`:''}<br>EAN: ${eans.length?eans.map(esc).join(' · '):'No publicado'}`;
+    if (meta) meta.innerHTML = `${storesCount} tienda${storesCount===1?'':'s'} asociada${storesCount===1?'':'s'} · ${offersCount} oferta${offersCount===1?'':'s'}${infoCount?` · ${infoCount} fuente informativa`:''}${historySources.length?' · histórico Padelful':''}<br>EAN: ${eans.length?eans.map(esc).join(' · '):'No publicado'}`;
 
     const offersNav = root.querySelector('.detail-nav [data-scroll="offers-panel"]');
     if (offersNav) offersNav.textContent = `Ofertas y fuentes (${offersCount + infoCount})`;
@@ -110,9 +140,31 @@
       if (node.textContent.includes('tienda no aporta')) node.textContent = '«No publicado» indica que esa fuente no aporta el dato en su ficha.';
     });
 
+    const historySummary = root.querySelector('#history-panel .panel-summary-copy');
+    if (historySummary && historySources.length) {
+      const heading = historySummary.querySelector('.panel-summary-title'); if (heading) heading.textContent = 'Histórico de precios por tiendas y fuentes';
+      const copy = historySummary.querySelector('.panel-summary-description'); if (copy) copy.textContent = 'Compara tu histórico propio con el histórico externo publicado por Padelful.';
+    }
+    const chartStores = root.querySelector('#history-panel .chart-stores');
+    if (chartStores) {
+      historySources.forEach(offer => {
+        if (chartStores.querySelector(`[data-chart-store="${CSS.escape(offer.store)}"]`)) return;
+        const label = document.createElement('label');
+        label.innerHTML = `<input type="checkbox" data-chart-store="${esc(offer.store)}" checked>${dot(offer.store)}${esc(storeName(offer.store))} <span class="source-badge">externo</span>`;
+        chartStores.appendChild(label);
+      });
+    }
+    const chartNote = root.querySelector('#history-panel .chart-note');
+    if (chartNote && historySources.length && !root.querySelector('.external-history-note')) {
+      const note = document.createElement('p');
+      note.className = 'external-history-note';
+      note.textContent = 'La línea Padelful procede del histórico público de Padelful y se muestra como fuente externa. No altera el mejor precio actual, el ahorro ni el número de ofertas de ComparaTuPala.';
+      chartNote.insertAdjacentElement('beforebegin', note);
+    }
+
     if (!bestOffer(p.offers) && infoCount) {
       const box = root.querySelector('.buy-box');
-      if (box) box.innerHTML = `<div><p class="eyebrow">SIN OFERTAS COMERCIALES</p><div class="hero-price">Ficha disponible</div><p>Consulta las características publicadas por Padelful.</p></div><small>Esta pala todavía no tiene una oferta de compra monitorizada por ComparaTuPala.</small>`;
+      if (box) box.innerHTML = `<div><p class="eyebrow">SIN OFERTAS COMERCIALES</p><div class="hero-price">Ficha disponible</div><p>Consulta las características${historySources.length?' y el histórico de precios':''} publicados por Padelful.</p></div><small>Esta pala todavía no tiene una oferta de compra monitorizada por ComparaTuPala.</small>`;
     }
   };
 
@@ -160,7 +212,7 @@
     const title = root.querySelector('#store-catalog-title');
     if (title) title.textContent = 'Palas con información de Padelful';
     const independent = root.querySelector('.store-independent-copy');
-    if (independent) independent.textContent = 'Padelful se muestra como fuente informativa para aportar características y contexto. No se contabiliza como tienda comercial ni como oferta de compra.';
+    if (independent) independent.textContent = 'Padelful se muestra como fuente informativa para aportar características, contexto e histórico de precios. No se contabiliza como tienda comercial ni como oferta de compra.';
     const actionSmall = root.querySelector('.store-hero-action small');
     if (actionSmall) actionSmall.textContent = 'La ficha enlazada pertenece a Padelful. ComparaTuPala no atribuye a Padelful una oferta de compra propia.';
     const availabilitySelect = root.querySelector('#store-availability');
