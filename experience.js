@@ -219,8 +219,8 @@
   window.addEventListener('hashchange', syncControls);
   syncControls();
 
-  // app.js renders these two snippets dynamically. Keep their shipping copy
-  // explicit: displayed prices do not include shipping costs.
+  // app.js renders these snippets dynamically. Keep their shipping copy explicit
+  // and add a secondary shortcut from the hero buy box to the offers section.
   function syncShippingCopy() {
     const detailNote = document.querySelector('.buy-box small');
     if (detailNote?.textContent.includes('Sin gastos de envío')) {
@@ -231,11 +231,43 @@
       landingNote.textContent = landingNote.textContent.replace('Sin gastos de envío', 'No incluye gastos de envío');
     }
   }
-  const shippingObserver = new MutationObserver(syncShippingCopy);
+
+  function syncCompareOffersShortcut() {
+    const buyBox = document.querySelector('#product-view .buy-box');
+    const offersPanel = document.getElementById('offers-panel');
+    if (!buyBox || !offersPanel || buyBox.querySelector('.buy-box-compare-offers')) return;
+
+    const compareButton = document.createElement('button');
+    compareButton.type = 'button';
+    compareButton.className = 'secondary-button buy-box-compare-offers';
+    compareButton.textContent = 'Comparar ofertas ↓';
+    compareButton.setAttribute('aria-label', 'Comparar todas las ofertas de esta pala');
+    compareButton.addEventListener('click', () => {
+      const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      offersPanel.scrollIntoView({behavior: reduceMotion ? 'auto' : 'smooth', block: 'start'});
+      const heading = offersPanel.querySelector('h2');
+      if (heading) {
+        heading.setAttribute('tabindex', '-1');
+        setTimeout(() => heading.focus({preventScroll: true}), reduceMotion ? 0 : 350);
+      }
+    });
+
+    const primaryOfferLink = buyBox.querySelector('.primary-button');
+    const shippingNote = buyBox.querySelector('small');
+    if (shippingNote) buyBox.insertBefore(compareButton, shippingNote);
+    else if (primaryOfferLink) primaryOfferLink.insertAdjacentElement('afterend', compareButton);
+    else buyBox.appendChild(compareButton);
+  }
+
+  const shippingObserver = new MutationObserver(() => {
+    syncShippingCopy();
+    syncCompareOffersShortcut();
+  });
   [document.getElementById('product-view'), document.getElementById('landing-product')].filter(Boolean).forEach(node => {
     shippingObserver.observe(node, {childList: true, subtree: true});
   });
   syncShippingCopy();
+  syncCompareOffersShortcut();
 
   const back = document.getElementById('back-to-top');
   let scheduled = false;
