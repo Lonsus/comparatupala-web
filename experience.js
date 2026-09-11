@@ -219,13 +219,36 @@
   window.addEventListener('hashchange', syncControls);
   syncControls();
 
-  // app.js renders these snippets dynamically. Keep their shipping copy explicit
-  // and add a secondary shortcut from the hero buy box to the offers section.
+  // app.js renders these snippets dynamically. Keep the detail buy box concise
+  // and add a clearly differentiated shortcut to the offers section.
+  function ensureBuyBoxPolishStyles() {
+    if (document.getElementById('buy-box-polish-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'buy-box-polish-styles';
+    style.textContent = `
+      .professional-ui .buy-box .buy-box-compare-offers{
+        width:100%!important;min-height:46px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;
+        gap:14px!important;margin:0 0 12px!important;padding:11px 14px!important;border:1px solid #607986!important;border-radius:9px!important;
+        background:#263840!important;color:#f4f8f6!important;font:inherit!important;font-weight:760!important;letter-spacing:.01em!important;
+        box-shadow:inset 0 1px 0 #ffffff12,0 4px 12px #00000016!important;cursor:pointer!important;
+        transition:background .16s,border-color .16s,transform .16s,box-shadow .16s!important;
+      }
+      .professional-ui .buy-box .buy-box-compare-offers:hover{background:#314b55!important;border-color:#86a4b0!important;color:#fff!important;transform:translateY(-1px)!important;box-shadow:inset 0 1px 0 #ffffff18,0 6px 16px #00000020!important}
+      .professional-ui .buy-box .buy-box-compare-offers:active{transform:translateY(0)!important}
+      .professional-ui .buy-box .buy-box-compare-offers:focus-visible{outline:3px solid #9bc4d2!important;outline-offset:3px!important}
+      .professional-ui .buy-box .buy-box-compare-arrow{display:grid;place-items:center;width:25px;height:25px;flex:0 0 25px;border-radius:50%;background:#ffffff12;color:#d8ebf0;font-size:1rem;line-height:1}
+      .professional-ui .buy-box .primary-button{margin-bottom:8px!important}
+      .professional-ui .buy-box>small{display:block;margin-top:0!important;color:#b9cfc0!important;font-size:.78rem!important;line-height:1.5!important}
+      @media(max-width:540px){.professional-ui .buy-box .buy-box-compare-offers{min-height:48px!important;padding:12px 14px!important}}
+      @media(prefers-reduced-motion:reduce){.professional-ui .buy-box .buy-box-compare-offers{transition:none!important}.professional-ui .buy-box .buy-box-compare-offers:hover{transform:none!important}}
+    `;
+    document.head.appendChild(style);
+  }
+
   function syncShippingCopy() {
     const detailNote = document.querySelector('.buy-box small');
-    if (detailNote?.textContent.includes('Sin gastos de envío')) {
-      detailNote.textContent = detailNote.textContent.replace('Sin gastos de envío', 'No incluye gastos de envío');
-    }
+    if (detailNote) detailNote.textContent = 'Confirma el precio final en la tienda.';
+
     const landingNote = document.querySelector('.landing-product-note');
     if (landingNote?.textContent.includes('Sin gastos de envío')) {
       landingNote.textContent = landingNote.textContent.replace('Sin gastos de envío', 'No incluye gastos de envío');
@@ -235,30 +258,33 @@
   function syncCompareOffersShortcut() {
     const buyBox = document.querySelector('#product-view .buy-box');
     const offersPanel = document.getElementById('offers-panel');
-    if (!buyBox || !offersPanel || buyBox.querySelector('.buy-box-compare-offers')) return;
+    if (!buyBox || !offersPanel) return;
 
-    const compareButton = document.createElement('button');
-    compareButton.type = 'button';
-    compareButton.className = 'secondary-button buy-box-compare-offers';
-    compareButton.textContent = 'Comparar ofertas ↓';
-    compareButton.setAttribute('aria-label', 'Comparar todas las ofertas de esta pala');
-    compareButton.addEventListener('click', () => {
-      const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-      offersPanel.scrollIntoView({behavior: reduceMotion ? 'auto' : 'smooth', block: 'start'});
-      const heading = offersPanel.querySelector('h2');
-      if (heading) {
-        heading.setAttribute('tabindex', '-1');
-        setTimeout(() => heading.focus({preventScroll: true}), reduceMotion ? 0 : 350);
-      }
-    });
+    let compareButton = buyBox.querySelector('.buy-box-compare-offers');
+    if (!compareButton) {
+      compareButton = document.createElement('button');
+      compareButton.type = 'button';
+      compareButton.className = 'buy-box-compare-offers';
+      compareButton.setAttribute('aria-label', 'Comparar todas las ofertas de esta pala');
+      compareButton.addEventListener('click', () => {
+        const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        offersPanel.scrollIntoView({behavior: reduceMotion ? 'auto' : 'smooth', block: 'start'});
+        const heading = offersPanel.querySelector('h2');
+        if (heading) {
+          heading.setAttribute('tabindex', '-1');
+          setTimeout(() => heading.focus({preventScroll: true}), reduceMotion ? 0 : 350);
+        }
+      });
 
-    const primaryOfferLink = buyBox.querySelector('.primary-button');
-    const shippingNote = buyBox.querySelector('small');
-    if (shippingNote) buyBox.insertBefore(compareButton, shippingNote);
-    else if (primaryOfferLink) primaryOfferLink.insertAdjacentElement('afterend', compareButton);
-    else buyBox.appendChild(compareButton);
+      const shippingNote = buyBox.querySelector('small');
+      if (shippingNote) buyBox.insertBefore(compareButton, shippingNote);
+      else buyBox.appendChild(compareButton);
+    }
+
+    compareButton.innerHTML = '<span>Comparar ofertas</span><span class="buy-box-compare-arrow" aria-hidden="true">↓</span>';
   }
 
+  ensureBuyBoxPolishStyles();
   const shippingObserver = new MutationObserver(() => {
     syncShippingCopy();
     syncCompareOffersShortcut();
