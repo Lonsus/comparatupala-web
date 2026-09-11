@@ -72,3 +72,26 @@
 .topbar .brand-symbol{position:relative;display:block;flex:0 0 54px;width:54px;height:54px;overflow:hidden;border-radius:8px;background:#000}
 .topbar .brand-symbol img{position:absolute;display:block;width:140%;max-width:none;height:auto;left:-20%;top:-12%;border-radius:0}
 @media(max-width:540px){.topbar .brand-symbol{flex-basis:44px;width:44px;height:44px}}
+
+/* Professional savings ticker: catalog information, not advertising. */
+.savings-ticker{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:stretch;overflow:hidden;margin:16px 0 20px;border:1px solid #234838;border-radius:14px;background:linear-gradient(90deg,#0a2117 0%,#102a1e 55%,#0b2017 100%);color:#fff;box-shadow:0 12px 30px #0c2c1d1a}
+.savings-ticker-label{display:flex;align-items:center;gap:12px;min-width:210px;padding:14px 18px;border-right:1px solid #315443;background:#0b1a13}
+.savings-ticker-label>span:last-child{display:grid;gap:2px}
+.savings-ticker-label strong{font-size:.8rem;line-height:1.2;letter-spacing:.08em;text-transform:uppercase;color:#eaf7ef}
+.savings-ticker-label small{font-size:.68rem;line-height:1.35;color:#9fbead}
+.savings-ticker-pulse{width:9px;height:9px;flex:0 0 9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 5px #36d98b18}
+.savings-ticker-viewport{position:relative;overflow:hidden;min-width:0;outline:none}
+.savings-ticker-viewport::before,.savings-ticker-viewport::after{content:'';position:absolute;top:0;bottom:0;width:34px;z-index:2;pointer-events:none}
+.savings-ticker-viewport::before{left:0;background:linear-gradient(90deg,#102a1e,transparent)}
+.savings-ticker-viewport::after{right:0;background:linear-gradient(270deg,#0b2017,transparent)}
+.savings-ticker-track{display:flex;width:max-content;will-change:transform;animation:savings-ticker-scroll 46s linear infinite}
+.savings-ticker-viewport:hover .savings-ticker-track,.savings-ticker-viewport:focus-within .savings-ticker-track{animation-play-state:paused}
+.savings-ticker-group{display:flex;align-items:center;gap:10px;padding:8px 34px 8px 10px}
+.savings-ticker-item{display:grid;grid-template-columns:minmax(150px,auto) auto;grid-template-areas:'name saving' 'price saving';align-items:center;column-gap:14px;min-width:310px;padding:8px 12px;border:1px solid #ffffff10;border-radius:10px;color:#fff;background:#ffffff05;transition:background .16s,border-color .16s,transform .16s}
+.savings-ticker-item:hover,.savings-ticker-item:focus-visible{background:#ffffff0d;border-color:#4d7b64;text-decoration:none;transform:translateY(-1px)}
+.savings-ticker-name{grid-area:name;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.82rem;font-weight:700;color:#f0f7f3}
+.savings-ticker-saving{grid-area:saving;align-self:center;padding:6px 9px;border-radius:999px;background:#123f2a;color:#75efb2;font-size:.78rem;white-space:nowrap;font-variant-numeric:tabular-nums}
+.savings-ticker-item small{grid-area:price;margin-top:1px;color:#9fbaaa;font-size:.68rem;font-variant-numeric:tabular-nums}
+@keyframes savings-ticker-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media(max-width:760px){.savings-ticker{grid-template-columns:1fr}.savings-ticker-label{min-width:0;border-right:0;border-bottom:1px solid #315443;padding:11px 14px}.savings-ticker-label small{display:none}.savings-ticker-group{padding:8px 24px 8px 8px}.savings-ticker-item{min-width:270px}}
+@media(prefers-reduced-motion:reduce){.savings-ticker-viewport{overflow-x:auto}.savings-ticker-track{animation:none}.savings-ticker-group[aria-hidden="true"]{display:none}.savings-ticker-viewport::before,.savings-ticker-viewport::after{display:none}.savings-ticker-item{transform:none!important}}
