@@ -6,7 +6,13 @@
   const openButton = document.getElementById('account-open');
   const message = document.getElementById('account-status');
   const signedIn = document.getElementById('account-signed-in');
+  const RESEND_COOLDOWN_MS = 60 * 1000;
+  const RESEND_WINDOW_MS = 15 * 60 * 1000;
+  const RESEND_MAX_ATTEMPTS = 3;
   let client = null, user = null, epoch = 0, busy = false, authMode = 'login';
+  let pendingConfirmationEmail = '';
+  let resendAvailableAt = 0;
+  let resendTimer = null;
 
   const say = text => { message.textContent = text; };
   const check = result => { if (result.error) throw result.error; return result.data; };
@@ -122,6 +128,41 @@
     return { level: Math.min(score, 5), label: labels[Math.min(score, 5)] };
   }
 
+  function emailHash(email) {
+    const normalized = email.trim().toLowerCase();
+    let hash = 2166136261;
+    for (let index = 0; index < normalized.length; index += 1) {
+      hash ^= normalized.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0).toString(36);
+  }
+
+  function resendStorageKey(email) {
+    return `comparatupala:confirm-resend:${emailHash(email)}`;
+  }
+
+  function recentResendAttempts(email) {
+    if (!email) return [];
+    try {
+      const parsed = JSON.parse(localStorage.getItem(resendStorageKey(email)) || '[]');
+      if (!Array.isArray(parsed)) return [];
+      const cutoff = Date.now() - RESEND_WINDOW_MS;
+      const recent = parsed.filter(value => Number.isFinite(Number(value)) && Number(value) >= cutoff).map(Number);
+      localStorage.setItem(resendStorageKey(email), JSON.stringify(recent));
+      return recent;
+    } catch {
+      return [];
+    }
+  }
+
+  function recordResendAttempt(email) {
+    const recent = recentResendAttempts(email);
+    recent.push(Date.now());
+    try { localStorage.setItem(resendStorageKey(email), JSON.stringify(recent)); } catch { /* storage unavailable */ }
+    return recent;
+  }
+
   loginForm.innerHTML = `
     <div class="account-auth-view" data-auth-view="login">
       <div class="account-auth-intro">
@@ -177,8 +218,16 @@
       </div>
       <button class="account-primary-action" type="submit" disabled>Crear cuenta</button>
       <p class="account-note">Después del registro tendrás que confirmar tu email antes de poder iniciar sesión.</p>
+      <div class="account-resend-panel" data-resend-panel hidden>
+        <button class="account-secondary-action" type="button" data-resend-confirmation>Reenviar correo de confirmación</button>
+        <p class="account-note" data-resend-help aria-live="polite"></p>
+      </div>
     </div>`;
   loginForm.insertAdjacentElement('afterend', registerForm);
+
+  const resendPanel = registerForm.querySelector('[data-resend-panel]');
+  const resendButton = registerForm.querySelector('[data-resend-confirmation]');
+  const resendHelp = registerForm.querySelector('[data-resend-help]');
 
   function registrationState() {
     const email = registerForm.elements.email.value;
@@ -198,6 +247,43 @@
     container.querySelector('[data-strength-label]').textContent = strength.label;
   }
 
+  function updateResendUi() {
+    if (!pendingConfirmationEmail) {
+      resendPanel.hidden = true;
+      return;
+    }
+    resendPanel.hidden = false;
+    const attempts = recentResendAttempts(pendingConfirmationEmail);
+    const now = Date.now();
+    const lastAttempt = attempts.length ? attempts[attempts.length - 1] : 0;
+    const nextAllowedAt = Math.max(resendAvailableAt, lastAttempt + RESEND_COOLDOWN_MS);
+    const secondsLeft = Math.max(0, Math.ceil((nextAllowedAt - now) / 1000));
+    const windowResetAt = attempts.length ? attempts[0] + RESEND_WINDOW_MS : 0;
+    const windowSeconds = Math.max(0, Math.ceil((windowResetAt - now) / 1000));
+    const quotaReached = attempts.length >= RESEND_MAX_ATTEMPTS;
+
+    resendButton.disabled = busy || secondsLeft > 0 || quotaReached;
+    if (quotaReached) {
+      resendHelp.textContent = `Has alcanzado el máximo local de ${RESEND_MAX_ATTEMPTS} reenvíos en 15 minutos. Podrás volver a intentarlo en aproximadamente ${Math.max(1, Math.ceil(windowSeconds / 60))} min.`;
+    } else if (secondsLeft > 0) {
+      resendHelp.textContent = `Puedes solicitar otro correo en ${secondsLeft} s. Reenvíos disponibles en esta ventana: ${RESEND_MAX_ATTEMPTS - attempts.length}.`;
+    } else {
+      resendHelp.textContent = `Puedes reenviar el correo. Máximo local: ${RESEND_MAX_ATTEMPTS} reenvíos cada 15 minutos; Supabase aplica además sus propios límites.`;
+    }
+  }
+
+  function startResendTimer() {
+    if (resendTimer) clearInterval(resendTimer);
+    updateResendUi();
+    resendTimer = setInterval(() => {
+      updateResendUi();
+      if (!pendingConfirmationEmail) {
+        clearInterval(resendTimer);
+        resendTimer = null;
+      }
+    }, 1000);
+  }
+
   function updateRegistrationRequirements() {
     const state = registrationState();
     Object.entries(state).forEach(([name, ok]) => {
@@ -207,6 +293,7 @@
     });
     updatePasswordStrength();
     registerForm.querySelector('button[type="submit"]').disabled = busy || !client || !Object.values(state).every(Boolean);
+    updateResendUi();
     return Object.values(state).every(Boolean);
   }
 
@@ -258,6 +345,10 @@
     profileForm.reset();
     window.CTPFavorites.setSession(client, user);
     if (!user) authMode = 'login';
+    if (user) {
+      pendingConfirmationEmail = '';
+      resendAvailableAt = 0;
+    }
     render();
     say(user ? 'Sesión iniciada.' : 'Puedes iniciar sesión o crear una cuenta para sincronizar tus favoritas.');
     if (user) void loadProfile(user, version);
@@ -308,6 +399,13 @@
     } catch (error) {
       const details = authErrorDetails(error);
       console.error('Supabase sign-in failed', error, details);
+      if (`${details.code} ${details.message}`.toLowerCase().includes('email not confirmed')) {
+        pendingConfirmationEmail = email;
+        registerForm.elements.email.value = email;
+        authMode = 'register';
+        resendAvailableAt = Date.now();
+        startResendTimer();
+      }
       say(describeAuthError(error, 'login'));
     } finally { busy = false; render(); }
   });
@@ -329,13 +427,65 @@
       }));
       registerForm.elements.password.value = '';
       registerForm.elements.passwordConfirm.value = '';
-      if (data.session) applySession(data.session);
-      else say('Cuenta creada. Revisa tu email y confirma el registro antes de iniciar sesión.');
+      if (data.session) {
+        applySession(data.session);
+      } else {
+        pendingConfirmationEmail = email;
+        resendAvailableAt = Date.now() + RESEND_COOLDOWN_MS;
+        startResendTimer();
+        say('Cuenta creada. Revisa tu email y confirma el registro antes de iniciar sesión. Si no llega, podrás solicitar otro correo cuando termine la espera.');
+      }
     } catch (error) {
       const details = authErrorDetails(error);
       console.error('Supabase sign-up failed', error, details);
       say(describeAuthError(error, 'register'));
     } finally { busy = false; render(); }
+  });
+
+  resendButton.addEventListener('click', async () => {
+    if (busy || !client || !pendingConfirmationEmail) return;
+    const attempts = recentResendAttempts(pendingConfirmationEmail);
+    const lastAttempt = attempts.length ? attempts[attempts.length - 1] : 0;
+    const now = Date.now();
+    if (attempts.length >= RESEND_MAX_ATTEMPTS) {
+      updateResendUi();
+      say('Has alcanzado el máximo local de 3 reenvíos en 15 minutos para este correo. Espera a que termine la ventana antes de volver a intentarlo.');
+      return;
+    }
+    const nextAllowedAt = Math.max(resendAvailableAt, lastAttempt + RESEND_COOLDOWN_MS);
+    if (now < nextAllowedAt) {
+      updateResendUi();
+      say(`Espera ${Math.ceil((nextAllowedAt - now) / 1000)} s antes de solicitar otro correo.`);
+      return;
+    }
+
+    busy = true;
+    render();
+    say('Solicitando un nuevo correo de confirmación…');
+    try {
+      check(await client.auth.resend({
+        type: 'signup',
+        email: pendingConfirmationEmail,
+        options: { emailRedirectTo: location.origin + location.pathname }
+      }));
+      recordResendAttempt(pendingConfirmationEmail);
+      resendAvailableAt = Date.now() + RESEND_COOLDOWN_MS;
+      say('Correo de confirmación reenviado. Revisa también la carpeta de spam o correo no deseado.');
+    } catch (error) {
+      const details = authErrorDetails(error);
+      console.error('Supabase confirmation resend failed', error, details);
+      const normalized = `${details.code} ${details.name} ${details.message} ${details.serialized}`.toLowerCase();
+      if (details.status === 429 || normalized.includes('rate limit') || normalized.includes('over_email_send_rate_limit')) {
+        resendAvailableAt = Date.now() + RESEND_COOLDOWN_MS;
+        say('Supabase ha bloqueado temporalmente el reenvío por exceso de solicitudes (HTTP 429). Espera al menos un minuto antes de volver a intentarlo.');
+      } else {
+        say(describeAuthError(error, 'register'));
+      }
+    } finally {
+      busy = false;
+      render();
+      startResendTimer();
+    }
   });
 
   profileForm.addEventListener('submit', async event => {
