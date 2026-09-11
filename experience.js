@@ -247,7 +247,8 @@
 
   function syncShippingCopy() {
     const detailNote = document.querySelector('.buy-box small');
-    if (detailNote) detailNote.textContent = 'Confirma el precio final en la tienda.';
+    const detailCopy = 'Confirma el precio final en la tienda.';
+    if (detailNote && detailNote.textContent.trim() !== detailCopy) detailNote.textContent = detailCopy;
 
     const landingNote = document.querySelector('.landing-product-note');
     if (landingNote?.textContent.includes('Sin gastos de envío')) {
@@ -266,6 +267,7 @@
       compareButton.type = 'button';
       compareButton.className = 'buy-box-compare-offers';
       compareButton.setAttribute('aria-label', 'Comparar todas las ofertas de esta pala');
+      compareButton.innerHTML = '<span>Comparar ofertas</span><span class="buy-box-compare-arrow" aria-hidden="true">↓</span>';
       compareButton.addEventListener('click', () => {
         const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
         offersPanel.scrollIntoView({behavior: reduceMotion ? 'auto' : 'smooth', block: 'start'});
@@ -280,8 +282,6 @@
       if (shippingNote) buyBox.insertBefore(compareButton, shippingNote);
       else buyBox.appendChild(compareButton);
     }
-
-    compareButton.innerHTML = '<span>Comparar ofertas</span><span class="buy-box-compare-arrow" aria-hidden="true">↓</span>';
   }
 
   ensureBuyBoxPolishStyles();
