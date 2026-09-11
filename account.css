@@ -1,4 +1,10 @@
-#account-open { border: 1px solid #347354; border-radius: 8px; padding: .55rem .85rem; background: #fff; color: #175c39; font: inherit; cursor: pointer; white-space: nowrap; }
+#account-open { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; padding: .64rem 1rem .64rem .86rem; border: 1px solid #3d7b5a; border-radius: 10px; background: linear-gradient(180deg, #f9fffb 0%, #eaf7ef 100%); color: #0d5a35; box-shadow: inset 0 1px 0 #ffffffcc, 0 6px 18px #0a2f1c16; font: inherit; font-size: .9rem; font-weight: 780; letter-spacing: .01em; cursor: pointer; white-space: nowrap; transition: transform .16s ease, background .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease; }
+#account-open::before { content: ''; width: 24px; height: 24px; flex: 0 0 24px; border-radius: 50%; background-color: #175c39; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 21a8 8 0 0 0-16 0'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: center; background-size: 14px 14px; box-shadow: inset 0 0 0 1px #ffffff1f; transition: background-color .16s ease, transform .16s ease; }
+#account-open::after { content: '›'; margin-left: 1px; color: currentColor; font-size: 1.1rem; font-weight: 800; line-height: 1; opacity: .62; transform: translateY(-1px); transition: transform .16s ease, opacity .16s ease; }
+#account-open:hover { background: linear-gradient(180deg, #1d6b43 0%, #145331 100%); border-color: #55a979; color: #fff; box-shadow: inset 0 1px 0 #ffffff1f, 0 8px 22px #061d122e; transform: translateY(-1px); }
+#account-open:hover::before { background-color: #0b3d24; transform: scale(1.03); }
+#account-open:hover::after { opacity: .9; transform: translate(2px, -1px); }
+#account-open:active { transform: translateY(0); box-shadow: inset 0 2px 5px #071f142e, 0 3px 10px #061d121f; }
 .account-dialog { width: min(470px, calc(100% - 32px)); max-height: calc(100dvh - 32px); overflow: auto; padding: 24px; border: 1px solid #cbd9cf; border-radius: 18px; color: #17261e; background: #fff; box-shadow: 0 24px 60px #10251b33; }
 .account-dialog:has(#account-signed-in:not([hidden])) { width: min(860px, calc(100% - 32px)); }
 .account-dialog::backdrop { background: #10251bb3; backdrop-filter: blur(2px); }
@@ -100,7 +106,9 @@
 .guest-save-notice-action:focus-visible, .guest-save-notice-close:focus-visible { outline: 3px solid #187447; outline-offset: 3px; }
 @media (max-width: 700px) {
   .topbar { flex-wrap: wrap; }
-  #account-open { margin-left: auto; }
+  #account-open { margin-left: auto; min-height: 42px; padding: .58rem .8rem; gap: 7px; }
+  #account-open::before { width: 22px; height: 22px; flex-basis: 22px; background-size: 13px 13px; }
+  #account-open::after { font-size: 1rem; }
   .account-dialog, .account-dialog:has(#account-signed-in:not([hidden])) { width: calc(100% - 20px); max-height: calc(100dvh - 20px); padding: 18px; border-radius: 14px; }
   .account-dialog .account-heading { padding-bottom: 14px; }
   .account-dialog h3 { font-size: 1.3rem; }
@@ -119,4 +127,8 @@
   .saved-account-prompt-action { width: 100%; min-width: 0; }
   .guest-save-notice { right: 12px; bottom: 12px; width: calc(100vw - 24px); padding: 16px; border-radius: 16px; }
   .guest-save-notice-copy { padding-right: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #account-open, #account-open::before, #account-open::after { transition: none; }
+  #account-open:hover { transform: none; }
 }
