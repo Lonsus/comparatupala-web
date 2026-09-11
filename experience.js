@@ -6,28 +6,47 @@
   const quickFilters = [...document.querySelectorAll('[data-quick-filter]')];
   const presets = {'availability': 'available', 'offer-count': '>=2'};
 
-  // Keep "Guardadas" out of the primary site navigation. For signed-in users it
-  // becomes the first, prominent action inside Mi cuenta while preserving the
-  // existing #saved-count element used by app.js.
+  // Preserve the original #nav-saved element in the top navigation because
+  // app.js uses its id, its #saved-count child and the #guardadas route as part
+  // of the catalog state. Hide it visually and expose a separate prominent
+  // shortcut inside Mi cuenta instead of moving/reusing the original node.
   const savedLink = document.getElementById('nav-saved');
+  const savedCount = document.getElementById('saved-count');
   const signedInAccount = document.getElementById('account-signed-in');
   const accountDialog = document.getElementById('account-dialog');
-  if (savedLink && signedInAccount) {
-    const initialCount = savedLink.querySelector('#saved-count')?.textContent || '0';
-    savedLink.className = 'account-saved-shortcut';
-    savedLink.removeAttribute('aria-current');
-    savedLink.innerHTML = `
+  let accountSavedCount = null;
+
+  if (savedLink) savedLink.classList.add('nav-saved-account-only');
+
+  if (signedInAccount) {
+    const shortcut = document.createElement('button');
+    shortcut.type = 'button';
+    shortcut.className = 'account-saved-shortcut';
+    shortcut.setAttribute('aria-label', 'Abrir mis palas guardadas');
+    shortcut.innerHTML = `
       <span class="account-saved-shortcut-icon" aria-hidden="true">♥</span>
       <span class="account-saved-shortcut-copy">
         <strong>Mis palas guardadas</strong>
         <small>Abre todas tus favoritas en el catálogo</small>
       </span>
-      <span class="account-saved-shortcut-count"><span id="saved-count">${initialCount}</span> guardadas <span aria-hidden="true">→</span></span>`;
-    signedInAccount.prepend(savedLink);
-    savedLink.addEventListener('click', () => {
+      <span class="account-saved-shortcut-count"><span data-account-saved-count>${savedCount?.textContent || '0'}</span> guardadas <span aria-hidden="true">→</span></span>`;
+    signedInAccount.prepend(shortcut);
+    accountSavedCount = shortcut.querySelector('[data-account-saved-count]');
+    shortcut.addEventListener('click', () => {
       if (accountDialog?.open) accountDialog.close();
+      if (location.hash === '#guardadas') {
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+      } else {
+        location.hash = '#guardadas';
+      }
     });
   }
+
+  function syncSavedShortcutCount() {
+    if (accountSavedCount && savedCount) accountSavedCount.textContent = savedCount.textContent;
+  }
+  if (savedCount) new MutationObserver(syncSavedShortcutCount).observe(savedCount, {childList: true, characterData: true, subtree: true});
+  syncSavedShortcutCount();
 
   function syncControls() {
     clear.hidden = !search.value;
