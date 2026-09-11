@@ -57,6 +57,21 @@
     updateActiveSection();
   });
 
+  // The hero CTA must reveal the actual offer content before its own
+  // scroll handler runs. Open both the outer progressive-disclosure panel
+  // and the nested overflow so "Comparar ofertas" really shows every offer.
+  document.addEventListener('click', event => {
+    const button = event.target.closest('#product-view .buy-box-compare-offers');
+    if (!button) return;
+    const offersPanel = document.getElementById('offers-panel');
+    if (!offersPanel) return;
+    if (offersPanel instanceof HTMLDetailsElement) offersPanel.open = true;
+    const overflow = offersPanel.querySelector('.offers-overflow');
+    if (overflow instanceof HTMLDetailsElement) overflow.open = true;
+    preferredSection = 'offers-panel';
+    requestAnimationFrame(updateActiveSection);
+  }, true);
+
   window.addEventListener('scroll', updateActiveSection, {passive: true});
   window.addEventListener('resize', updateActiveSection, {passive: true});
   document.addEventListener('toggle', event => {
@@ -162,6 +177,50 @@
     document.body.appendChild(storeScript);
   }
 
+  function loadProductGallery() {
+    if (!document.querySelector('link[data-product-gallery]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'product-gallery.css?v=1';
+      link.dataset.productGallery = 'true';
+      document.head.appendChild(link);
+    }
+
+    const existing = document.querySelector('script[data-product-gallery]');
+    if (existing) {
+      window.CTPProductGallery?.refresh?.();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'product-gallery.js?v=1';
+    script.async = false;
+    script.dataset.productGallery = 'true';
+    script.addEventListener('load', () => window.CTPProductGallery?.refresh?.());
+    document.body.appendChild(script);
+  }
+
+  function loadProductPriceTrend() {
+    if (!document.querySelector('link[data-product-price-trend]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'product-price-trend.css?v=1';
+      link.dataset.productPriceTrend = 'true';
+      document.head.appendChild(link);
+    }
+
+    const existing = document.querySelector('script[data-product-price-trend]');
+    if (existing) {
+      window.CTPProductPriceTrend?.refresh?.();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'product-price-trend.js?v=1';
+    script.async = false;
+    script.dataset.productPriceTrend = 'true';
+    script.addEventListener('load', () => window.CTPProductPriceTrend?.refresh?.());
+    document.body.appendChild(script);
+  }
+
   function loadCatalogCardPolish(onReady) {
     if (document.querySelector('script[data-catalog-card-polish]')) {
       onReady?.();
@@ -193,6 +252,8 @@
       if (state.product) renderProduct(state.product);
       else renderCatalog();
     }
+    loadProductGallery();
+    loadProductPriceTrend();
     loadComparisonBulkActions();
     loadHistoryStoreActions();
     loadStoreCollapsibleSections();

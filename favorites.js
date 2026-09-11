@@ -72,8 +72,12 @@
       saved = new Set(guest);
       const persisted = writeGuest();
       emit();
+      if (!was && persisted) {
+        window.dispatchEvent(new CustomEvent('ctp:guest-favorite-saved', { detail: { productId: id } }));
+        return Promise.resolve({ ok: true, message: '' });
+      }
       return Promise.resolve({ ok: true, message: persisted ?
-        (was ? 'Pala quitada de guardadas' : 'Pala guardada en este dispositivo') :
+        'Pala quitada de guardadas' :
         'Cambio guardado solo durante esta sesión: el navegador no permite almacenamiento' });
     }
     const epoch = generation, uid = userId;
