@@ -26,6 +26,20 @@
 .account-dialog #account-status { margin: 14px 0 0; padding: 10px 12px; border-radius: 8px; background: #f4f8f5; color: #425348; font-size: .9rem; }
 .account-dialog .account-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .account-dialog .account-note { margin: 0; font-size: .85rem; color: #64746a; }
+.account-dialog .account-password-strength { display: grid; gap: 7px; margin-top: -4px; }
+.account-dialog .account-strength-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: .82rem; color: #5e7065; }
+.account-dialog .account-strength-heading strong { color: #6b5b3f; font-size: .82rem; }
+.account-dialog .account-strength-track { height: 8px; overflow: hidden; border-radius: 999px; background: #e7ede9; }
+.account-dialog .account-strength-track span { display: block; width: 0; height: 100%; border-radius: inherit; background: #a96c38; transition: width .2s ease, background-color .2s ease; }
+.account-dialog .account-password-strength small { color: #68786e; line-height: 1.35; }
+.account-dialog .account-password-strength[data-level="1"] .account-strength-track span { width: 20%; }
+.account-dialog .account-password-strength[data-level="2"] .account-strength-track span { width: 40%; }
+.account-dialog .account-password-strength[data-level="3"] .account-strength-track span { width: 60%; background: #ad8a32; }
+.account-dialog .account-password-strength[data-level="4"] .account-strength-track span { width: 80%; background: #4d8b5e; }
+.account-dialog .account-password-strength[data-level="5"] .account-strength-track span { width: 100%; background: #17623b; }
+.account-dialog .account-password-strength[data-level="3"] .account-strength-heading strong { color: #8a6b19; }
+.account-dialog .account-password-strength[data-level="4"] .account-strength-heading strong,
+.account-dialog .account-password-strength[data-level="5"] .account-strength-heading strong { color: #17623b; }
 .account-dialog .account-requirements { padding: 12px 14px; border: 1px solid #d8e3db; border-radius: 10px; background: #f8fbf9; }
 .account-dialog .account-requirements > p { margin: 0 0 8px; font-size: .85rem; font-weight: 800; color: #34473c; }
 .account-dialog .account-requirements ul { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
@@ -42,4 +56,5 @@
   .account-dialog .account-heading { padding-bottom: 14px; }
   .account-dialog h3 { font-size: 1.3rem; }
   .account-dialog .account-actions { display: grid; grid-template-columns: 1fr; }
+  .account-dialog .account-strength-heading { align-items: flex-start; flex-direction: column; gap: 2px; }
 }
