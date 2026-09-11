@@ -8,15 +8,15 @@
 
   // Preserve the original #nav-saved element in the top navigation because
   // app.js uses its id, its #saved-count child and the #guardadas route as part
-  // of the catalog state. Hide it visually and expose a separate prominent
-  // shortcut inside Mi cuenta instead of moving/reusing the original node.
+  // of the catalog state. Keep it in place but hide it visually. Mi cuenta gets
+  // a separate shortcut, so the original Guardadas behavior is untouched.
   const savedLink = document.getElementById('nav-saved');
   const savedCount = document.getElementById('saved-count');
   const signedInAccount = document.getElementById('account-signed-in');
   const accountDialog = document.getElementById('account-dialog');
   let accountSavedCount = null;
 
-  if (savedLink) savedLink.classList.add('nav-saved-account-only');
+  if (savedLink) savedLink.hidden = true;
 
   if (signedInAccount) {
     const shortcut = document.createElement('button');
