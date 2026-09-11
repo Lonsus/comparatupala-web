@@ -52,14 +52,6 @@
 .account-dialog .account-requirements li[data-valid="true"] span { background: #dcefe3; color: #17623b; }
 .account-confirmation-email { padding: 12px 14px; border: 1px solid #d8e3db; border-radius: 9px; background: #f8fbf9; font-weight: 750; overflow-wrap: anywhere; }
 #account-signed-in { margin-top: 18px; }
-.account-saved-shortcut { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; width: 100%; box-sizing: border-box; margin: 0 0 18px; padding: 18px 20px; border: 1px solid #175c39; border-radius: 14px; background: #175c39; color: #fff; text-decoration: none; box-shadow: 0 10px 24px #175c3924; transition: transform .15s ease, box-shadow .15s ease, background-color .15s ease; }
-.account-saved-shortcut:hover { transform: translateY(-1px); background: #11482d; box-shadow: 0 14px 28px #175c3930; }
-.account-saved-shortcut-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; background: #ffffff1f; font-size: 1.35rem; }
-.account-saved-shortcut-copy { display: grid; gap: 2px; min-width: 0; }
-.account-saved-shortcut-copy strong { font-size: 1.05rem; }
-.account-saved-shortcut-copy small { color: #dcebe2; font-size: .83rem; line-height: 1.35; }
-.account-saved-shortcut-count { display: flex; align-items: center; gap: 5px; white-space: nowrap; font-size: .86rem; font-weight: 750; }
-.account-saved-shortcut-count #saved-count { display: inline-grid; place-items: center; min-width: 27px; height: 27px; padding: 0 6px; border-radius: 999px; background: #fff; color: #175c39; }
 .account-session-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 18px; }
 .account-session-heading > div { display: grid; gap: 4px; }
 .account-current-email { margin: 0; color: #52675b; font-weight: 750; text-align: right; }
@@ -83,6 +75,17 @@
 .account-saved-empty p { margin: 4px 0 0; font-size: .86rem; }
 #account-sync-status { min-height: 1.4em; color: #607168; font-size: .86rem; }
 .account-footer-actions { justify-content: flex-end; padding-top: 8px; border-top: 1px solid #e3ebe6; }
+.saved-account-prompt { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin: 18px 0 22px; padding: 22px 24px; border: 1px solid #b8d4c2; border-radius: 16px; background: linear-gradient(135deg, #eef8f1, #f8fbf9); box-shadow: 0 10px 28px #173f2920; }
+.saved-account-prompt[hidden] { display: none !important; }
+.saved-account-prompt-copy { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.saved-account-prompt-copy > div { display: grid; gap: 4px; }
+.saved-account-prompt-copy p { margin: 0; color: #187447; font-size: .74rem; font-weight: 850; letter-spacing: .11em; }
+.saved-account-prompt-copy h2 { margin: 0; color: #173d2a; font-size: 1.25rem; }
+.saved-account-prompt-copy span { color: #587064; line-height: 1.45; }
+.saved-account-prompt-icon { display: grid; place-items: center; width: 48px; height: 48px; flex: 0 0 48px; border-radius: 14px; background: #175c39; color: #fff; font-size: 1.45rem; }
+.saved-account-prompt-action { flex: 0 0 auto; min-width: 190px; padding: 12px 16px; border: 1px solid #175c39; border-radius: 10px; background: #175c39; color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+.saved-account-prompt-action:hover { background: #11482d; border-color: #11482d; }
+.saved-account-prompt-action:focus-visible { outline: 3px solid #187447; outline-offset: 3px; }
 @media (max-width: 700px) {
   .topbar { flex-wrap: wrap; }
   #account-open { margin-left: auto; }
@@ -91,8 +94,6 @@
   .account-dialog h3 { font-size: 1.3rem; }
   .account-dialog .account-actions { display: grid; grid-template-columns: 1fr; }
   .account-dialog .account-strength-heading { align-items: flex-start; flex-direction: column; gap: 2px; }
-  .account-saved-shortcut { grid-template-columns: auto minmax(0, 1fr); padding: 16px; }
-  .account-saved-shortcut-count { grid-column: 2; white-space: normal; }
   .account-session-heading { align-items: flex-start; flex-direction: column; gap: 7px; }
   .account-current-email { text-align: left; }
   .account-settings-grid { grid-template-columns: 1fr; }
@@ -101,4 +102,7 @@
   .account-saved-item strong { white-space: normal; }
   .account-saved-actions { width: 100%; }
   .account-saved-actions a, .account-saved-actions button { flex: 1 1 0; text-align: center; }
+  .saved-account-prompt { align-items: stretch; flex-direction: column; gap: 16px; padding: 18px; }
+  .saved-account-prompt-copy { align-items: flex-start; }
+  .saved-account-prompt-action { width: 100%; min-width: 0; }
 }
