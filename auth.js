@@ -12,31 +12,76 @@
   const check = result => { if (result.error) throw result.error; return result.data; };
   const validEmail = value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
-  function describeAuthError(error, action) {
-    const rawMessage = String(error?.message || '').trim();
-    const code = String(error?.code || '').trim();
-    const normalized = `${code} ${rawMessage}`.toLowerCase();
+  function authErrorDetails(error) {
+    const objects = [];
+    const pushObject = value => {
+      if (value && typeof value === 'object' && !objects.includes(value)) objects.push(value);
+    };
+    pushObject(error);
+    pushObject(error?.error);
+    pushObject(error?.cause);
+    pushObject(error?.context);
+    pushObject(error?.context?.error);
+    pushObject(error?.response);
+    pushObject(error?.response?.data);
 
-    if (normalized.includes('already registered') || normalized.includes('user_already_exists')) {
+    const cleanText = value => {
+      if (typeof value !== 'string') return '';
+      const text = value.trim();
+      return text && text !== '{}' && text !== '[object Object]' ? text : '';
+    };
+    const firstText = values => values.map(cleanText).find(Boolean) || '';
+    const messageText = firstText([
+      typeof error === 'string' ? error : '',
+      ...objects.flatMap(item => [item.message, item.error_description, item.msg, item.details, item.hint, item.reason])
+    ]);
+    const code = firstText(objects.flatMap(item => [item.code, item.error_code, item.type]));
+    const name = firstText(objects.map(item => item.name));
+    const statusValue = objects.flatMap(item => [item.status, item.statusCode, item.status_code])
+      .find(value => Number.isFinite(Number(value)) && Number(value) > 0);
+    const status = statusValue ? Number(statusValue) : null;
+
+    let serialized = '';
+    if (!messageText && error && typeof error === 'object') {
+      try {
+        serialized = JSON.stringify(error, Object.getOwnPropertyNames(error));
+      } catch {
+        serialized = '';
+      }
+      if (serialized === '{}' || serialized === '[]') serialized = '';
+    }
+
+    return { message: messageText, code, name, status, serialized };
+  }
+
+  function describeAuthError(error, action) {
+    const details = authErrorDetails(error);
+    const normalized = `${details.code} ${details.name} ${details.message} ${details.serialized}`.toLowerCase();
+    const technical = [
+      details.code ? `código ${details.code}` : '',
+      details.status ? `HTTP ${details.status}` : ''
+    ].filter(Boolean).join(' · ');
+
+    if (normalized.includes('already registered') || normalized.includes('user_already_exists') || normalized.includes('email_exists')) {
       return 'Ya existe una cuenta asociada a este email. Vuelve a iniciar sesión o utiliza otra dirección.';
     }
-    if (normalized.includes('email rate limit') || normalized.includes('over_email_send_rate_limit')) {
-      return 'Se han enviado demasiados correos en poco tiempo. Espera unos minutos antes de solicitar otro registro o confirmación.';
+    if (normalized.includes('email rate limit') || normalized.includes('over_email_send_rate_limit') || normalized.includes('email_send_rate_limit')) {
+      return `No se pudo enviar otro correo de confirmación porque se ha alcanzado el límite temporal de emails${technical ? ` (${technical})` : ''}. Espera unos minutos y vuelve a intentarlo.`;
     }
-    if (normalized.includes('rate limit')) {
-      return 'Se ha alcanzado temporalmente el límite de intentos de autenticación. Espera unos minutos y vuelve a intentarlo.';
+    if (normalized.includes('rate limit') || details.status === 429) {
+      return `Se ha alcanzado temporalmente el límite de intentos de autenticación${technical ? ` (${technical})` : ''}. Espera unos minutos y vuelve a intentarlo.`;
     }
-    if (normalized.includes('error sending confirmation email') || normalized.includes('smtp')) {
-      return 'Supabase no ha podido enviar el correo de confirmación. Revisa Authentication → Emails → SMTP Settings y las credenciales SMTP configuradas antes de volver a intentarlo.';
+    if (normalized.includes('error sending confirmation email') || normalized.includes('email confirmation') || normalized.includes('smtp')) {
+      return `No se pudo crear la cuenta porque Supabase no pudo enviar el correo de confirmación${technical ? ` (${technical})` : ''}. Revisa Authentication → Emails → SMTP Settings y las credenciales del SMTP.`;
     }
     if (normalized.includes('signup') && normalized.includes('disabled')) {
       return 'El registro de nuevos usuarios está desactivado en Supabase. Activa Allow new users to sign up en Authentication → Providers → Email.';
     }
     if (normalized.includes('email') && (normalized.includes('invalid') || normalized.includes('not valid'))) {
-      return 'Supabase ha rechazado la dirección de email. Revisa que esté escrita correctamente y vuelve a intentarlo.';
+      return `Supabase ha rechazado la dirección de email${technical ? ` (${technical})` : ''}. Revisa que esté escrita correctamente y vuelve a intentarlo.`;
     }
     if (normalized.includes('weak_password') || (normalized.includes('password') && normalized.includes('weak'))) {
-      return 'Supabase considera que la contraseña no cumple la política de seguridad configurada. Utiliza una contraseña más larga y combina mayúsculas, minúsculas, números y símbolos.';
+      return `Supabase considera que la contraseña no cumple la política de seguridad configurada${technical ? ` (${technical})` : ''}. Utiliza una contraseña más larga y combina mayúsculas, minúsculas, números y símbolos.`;
     }
     if (normalized.includes('email not confirmed')) {
       return 'El email todavía no está confirmado. Abre el mensaje de confirmación que te envió ComparaTuPala antes de iniciar sesión.';
@@ -44,11 +89,25 @@
     if (normalized.includes('invalid login credentials')) {
       return 'El email o la contraseña no son correctos. Si acabas de registrarte, comprueba también que hayas confirmado el correo.';
     }
+    if (normalized.includes('failed to fetch') || normalized.includes('network') || normalized.includes('fetcherror')) {
+      return 'No se ha podido conectar con Supabase. Comprueba tu conexión a Internet y vuelve a intentarlo.';
+    }
+    if (normalized.includes('unexpected_failure') || (details.status && details.status >= 500)) {
+      if (action === 'register') {
+        return `Supabase devolvió un error interno al crear la cuenta${technical ? ` (${technical})` : ''}. Como el alta necesita enviar un correo de confirmación, revisa primero el SMTP y Authentication → Logs. Si el correo no pudo enviarse, la cuenta puede no haberse creado.`;
+      }
+      return `Supabase devolvió un error interno al iniciar sesión${technical ? ` (${technical})` : ''}. Revisa Authentication → Logs y vuelve a intentarlo.`;
+    }
 
-    const detail = rawMessage ? ` Supabase indica: ${rawMessage}${code ? ` (código: ${code})` : ''}.` : '';
-    return action === 'register'
-      ? `No se pudo crear la cuenta.${detail || ' Comprueba la conexión y vuelve a intentarlo.'}`
-      : `No se pudo iniciar sesión.${detail || ' Comprueba los datos y vuelve a intentarlo.'}`;
+    const readableMessage = details.message || details.serialized;
+    const prefix = action === 'register' ? 'No se pudo crear la cuenta.' : 'No se pudo iniciar sesión.';
+    if (readableMessage) {
+      return `${prefix} Detalle de Supabase: ${readableMessage}${technical ? ` (${technical})` : ''}.`;
+    }
+    if (technical) {
+      return `${prefix} Supabase devolvió ${technical}, pero no proporcionó un mensaje legible. Revisa Authentication → Logs para ver el motivo exacto.`;
+    }
+    return `${prefix} Supabase no proporcionó un detalle legible del error. Revisa Authentication → Logs y la configuración de SMTP antes de volver a intentarlo.`;
   }
 
   function passwordStrength(password) {
@@ -247,7 +306,8 @@
       loginForm.elements.password.value = '';
       if (data.session) applySession(data.session);
     } catch (error) {
-      console.error('Supabase sign-in failed', { code: error?.code, status: error?.status, message: error?.message });
+      const details = authErrorDetails(error);
+      console.error('Supabase sign-in failed', error, details);
       say(describeAuthError(error, 'login'));
     } finally { busy = false; render(); }
   });
@@ -272,7 +332,8 @@
       if (data.session) applySession(data.session);
       else say('Cuenta creada. Revisa tu email y confirma el registro antes de iniciar sesión.');
     } catch (error) {
-      console.error('Supabase sign-up failed', { code: error?.code, status: error?.status, message: error?.message });
+      const details = authErrorDetails(error);
+      console.error('Supabase sign-up failed', error, details);
       say(describeAuthError(error, 'register'));
     } finally { busy = false; render(); }
   });
