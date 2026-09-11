@@ -59,6 +59,8 @@ body.professional-ui{--bg:#f4f6f5;--line:#dce5df;--radius:16px;--muted:#586d60;l
 .professional-ui .product-title{line-height:1.12;letter-spacing:-.045em}
 .professional-ui .buy-box{border-radius:12px}
 .professional-ui .buy-box>small{font-size:.8125rem;line-height:1.6}
+.professional-ui .buy-box-compare-offers{width:100%;display:flex;align-items:center;justify-content:center;margin-top:8px;padding:10px 14px;border:1px solid #72b58f;background:#f4fbf7;color:#0d5d38;font-weight:750;cursor:pointer}
+.professional-ui .buy-box-compare-offers:hover{background:#e8f7ee;border-color:#5ca77c;color:#094b2e}
 .professional-ui .detail-nav-sticky{border-radius:10px;gap:22px;background:#f4f6f5f5;box-shadow:0 4px 12px #17271f07}
 .professional-ui .detail-nav-sticky a{min-height:44px;display:inline-flex;align-items:center;font-size:.875rem}
 .professional-ui :is(.panel,.store-section,.store-filters,.stores-intro,.store-hero){border-radius:14px;border-color:#dce5df}
