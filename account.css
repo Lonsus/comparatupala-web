@@ -86,6 +86,18 @@
 .saved-account-prompt-action { flex: 0 0 auto; min-width: 190px; padding: 12px 16px; border: 1px solid #175c39; border-radius: 10px; background: #175c39; color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
 .saved-account-prompt-action:hover { background: #11482d; border-color: #11482d; }
 .saved-account-prompt-action:focus-visible { outline: 3px solid #187447; outline-offset: 3px; }
+.guest-save-notice { position: fixed; right: 24px; bottom: 24px; z-index: 80; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px 16px; width: min(430px, calc(100vw - 32px)); padding: 18px; border: 1px solid #b8d4c2; border-radius: 18px; background: #fff; color: #17261e; box-shadow: 0 20px 55px #10251b38; transform: translateY(18px) scale(.98); opacity: 0; pointer-events: none; transition: transform .22s ease, opacity .22s ease; }
+.guest-save-notice.show { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
+.guest-save-notice-heart { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: #175c39; color: #fff; font-size: 1.4rem; box-shadow: inset 0 0 0 1px #ffffff18; }
+.guest-save-notice-copy { display: grid; gap: 3px; padding-right: 22px; }
+.guest-save-notice-copy > span { color: #187447; font-size: .72rem; font-weight: 850; letter-spacing: .12em; }
+.guest-save-notice-copy strong { font-size: 1.02rem; line-height: 1.25; }
+.guest-save-notice-copy p { margin: 2px 0 0; color: #5e7065; font-size: .86rem; line-height: 1.45; }
+.guest-save-notice-action { grid-column: 1 / -1; width: 100%; padding: 11px 14px; border: 1px solid #175c39; border-radius: 10px; background: #175c39; color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+.guest-save-notice-action:hover { background: #11482d; border-color: #11482d; }
+.guest-save-notice-close { position: absolute; top: 10px; right: 10px; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #66776d; font-size: 1.25rem; cursor: pointer; }
+.guest-save-notice-close:hover { background: #eef5f0; color: #173d2a; }
+.guest-save-notice-action:focus-visible, .guest-save-notice-close:focus-visible { outline: 3px solid #187447; outline-offset: 3px; }
 @media (max-width: 700px) {
   .topbar { flex-wrap: wrap; }
   #account-open { margin-left: auto; }
@@ -105,4 +117,6 @@
   .saved-account-prompt { align-items: stretch; flex-direction: column; gap: 16px; padding: 18px; }
   .saved-account-prompt-copy { align-items: flex-start; }
   .saved-account-prompt-action { width: 100%; min-width: 0; }
+  .guest-save-notice { right: 12px; bottom: 12px; width: calc(100vw - 24px); padding: 16px; border-radius: 16px; }
+  .guest-save-notice-copy { padding-right: 18px; }
 }
