@@ -6,47 +6,44 @@
   const quickFilters = [...document.querySelectorAll('[data-quick-filter]')];
   const presets = {'availability': 'available', 'offer-count': '>=2'};
 
-  // Preserve the original #nav-saved element in the top navigation because
-  // app.js uses its id, its #saved-count child and the #guardadas route as part
-  // of the catalog state. Keep it in place but hide it visually. Mi cuenta gets
-  // a separate shortcut, so the original Guardadas behavior is untouched.
+  // Keep Guardadas in the original top navigation and preserve its existing
+  // #guardadas route/counter behavior. The only new behavior is a stronger
+  // account CTA inside the saved-items view for visitors without a session.
   const savedLink = document.getElementById('nav-saved');
-  const savedCount = document.getElementById('saved-count');
-  const signedInAccount = document.getElementById('account-signed-in');
-  const accountDialog = document.getElementById('account-dialog');
-  let accountSavedCount = null;
+  if (savedLink) savedLink.hidden = false;
 
-  if (savedLink) savedLink.hidden = true;
+  const catalogView = document.getElementById('catalog-view');
+  const homeSearch = catalogView?.querySelector('.home-search');
+  const accountOpen = document.getElementById('account-open');
+  let savedAccountPrompt = null;
 
-  if (signedInAccount) {
-    const shortcut = document.createElement('button');
-    shortcut.type = 'button';
-    shortcut.className = 'account-saved-shortcut';
-    shortcut.setAttribute('aria-label', 'Abrir mis palas guardadas');
-    shortcut.innerHTML = `
-      <span class="account-saved-shortcut-icon" aria-hidden="true">♥</span>
-      <span class="account-saved-shortcut-copy">
-        <strong>Mis palas guardadas</strong>
-        <small>Abre todas tus favoritas en el catálogo</small>
-      </span>
-      <span class="account-saved-shortcut-count"><span data-account-saved-count>${savedCount?.textContent || '0'}</span> guardadas <span aria-hidden="true">→</span></span>`;
-    signedInAccount.prepend(shortcut);
-    accountSavedCount = shortcut.querySelector('[data-account-saved-count]');
-    shortcut.addEventListener('click', () => {
-      if (accountDialog?.open) accountDialog.close();
-      if (location.hash === '#guardadas') {
-        window.dispatchEvent(new HashChangeEvent('hashchange'));
-      } else {
-        location.hash = '#guardadas';
-      }
-    });
+  if (catalogView && homeSearch && accountOpen) {
+    savedAccountPrompt = document.createElement('section');
+    savedAccountPrompt.className = 'saved-account-prompt';
+    savedAccountPrompt.hidden = true;
+    savedAccountPrompt.setAttribute('aria-label', 'Guardar palas con una cuenta');
+    savedAccountPrompt.innerHTML = `
+      <div class="saved-account-prompt-copy">
+        <span class="saved-account-prompt-icon" aria-hidden="true">♥</span>
+        <div>
+          <p>GUARDA TUS PALAS</p>
+          <h2>Tus favoritas, siempre contigo</h2>
+          <span>Accede o crea una cuenta para sincronizar las palas que guardes y recuperarlas desde cualquier dispositivo.</span>
+        </div>
+      </div>
+      <button type="button" class="saved-account-prompt-action">Acceder o crear cuenta</button>`;
+    homeSearch.insertAdjacentElement('beforebegin', savedAccountPrompt);
+    savedAccountPrompt.querySelector('.saved-account-prompt-action').addEventListener('click', () => accountOpen.click());
   }
 
-  function syncSavedShortcutCount() {
-    if (accountSavedCount && savedCount) accountSavedCount.textContent = savedCount.textContent;
+  function syncSavedAccountPrompt() {
+    if (!savedAccountPrompt || !accountOpen) return;
+    const onSaved = location.hash === '#guardadas';
+    const signedIn = accountOpen.textContent.trim().toLowerCase() === 'mi cuenta';
+    savedAccountPrompt.hidden = !onSaved || signedIn;
   }
-  if (savedCount) new MutationObserver(syncSavedShortcutCount).observe(savedCount, {childList: true, characterData: true, subtree: true});
-  syncSavedShortcutCount();
+
+  if (accountOpen) new MutationObserver(syncSavedAccountPrompt).observe(accountOpen, {childList: true, characterData: true, subtree: true});
 
   function syncControls() {
     clear.hidden = !search.value;
@@ -58,6 +55,7 @@
     const saved = location.hash === '#guardadas';
     document.getElementById('catalog-location').textContent = saved ? 'Guardadas' : 'Catálogo';
     document.getElementById('home-search-title').textContent = saved ? 'Vuelve a tus favoritas' : 'Encuentra tu próxima pala';
+    syncSavedAccountPrompt();
   }
   clear.addEventListener('click', () => {
     search.value = '';
