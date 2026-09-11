@@ -162,6 +162,28 @@
     document.body.appendChild(storeScript);
   }
 
+  function loadProductGallery() {
+    if (!document.querySelector('link[data-product-gallery]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'product-gallery.css?v=1';
+      link.dataset.productGallery = 'true';
+      document.head.appendChild(link);
+    }
+
+    const existing = document.querySelector('script[data-product-gallery]');
+    if (existing) {
+      window.CTPProductGallery?.refresh?.();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'product-gallery.js?v=1';
+    script.async = false;
+    script.dataset.productGallery = 'true';
+    script.addEventListener('load', () => window.CTPProductGallery?.refresh?.());
+    document.body.appendChild(script);
+  }
+
   function loadCatalogCardPolish(onReady) {
     if (document.querySelector('script[data-catalog-card-polish]')) {
       onReady?.();
@@ -193,6 +215,7 @@
       if (state.product) renderProduct(state.product);
       else renderCatalog();
     }
+    loadProductGallery();
     loadComparisonBulkActions();
     loadHistoryStoreActions();
     loadStoreCollapsibleSections();
