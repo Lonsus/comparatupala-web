@@ -73,7 +73,7 @@
       const persisted = writeGuest();
       emit();
       return Promise.resolve({ ok: true, message: persisted ?
-        (was ? 'Pala quitada de guardadas' : 'Pala guardada en este dispositivo') :
+        (was ? 'Pala quitada de guardadas' : 'Pala guardada en este dispositivo. Accede o crea una cuenta para sincronizarla y recuperarla desde cualquier dispositivo.') :
         'Cambio guardado solo durante esta sesión: el navegador no permite almacenamiento' });
     }
     const epoch = generation, uid = userId;
