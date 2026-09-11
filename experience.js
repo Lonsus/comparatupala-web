@@ -45,6 +45,42 @@
 
   if (accountOpen) new MutationObserver(syncSavedAccountPrompt).observe(accountOpen, {childList: true, characterData: true, subtree: true});
 
+  // Rich reminder shown only when a visitor saves a racket without an account.
+  let guestSaveNotice = null;
+  let guestSaveTimer = null;
+  function hideGuestSaveNotice() {
+    if (!guestSaveNotice) return;
+    guestSaveNotice.classList.remove('show');
+    clearTimeout(guestSaveTimer);
+  }
+  function showGuestSaveNotice() {
+    if (!guestSaveNotice) {
+      guestSaveNotice = document.createElement('aside');
+      guestSaveNotice.className = 'guest-save-notice';
+      guestSaveNotice.setAttribute('role', 'status');
+      guestSaveNotice.setAttribute('aria-live', 'polite');
+      guestSaveNotice.innerHTML = `
+        <button type="button" class="guest-save-notice-close" aria-label="Cerrar recordatorio">×</button>
+        <div class="guest-save-notice-heart" aria-hidden="true">♥</div>
+        <div class="guest-save-notice-copy">
+          <span>GUARDADA PARA TI</span>
+          <strong>Esta pala ya está en tus favoritas</strong>
+          <p>Ahora vive en este dispositivo. Crea tu cuenta y llévatela contigo cuando cambies de móvil u ordenador.</p>
+        </div>
+        <button type="button" class="guest-save-notice-action">Guardar para siempre →</button>`;
+      document.body.appendChild(guestSaveNotice);
+      guestSaveNotice.querySelector('.guest-save-notice-close').addEventListener('click', hideGuestSaveNotice);
+      guestSaveNotice.querySelector('.guest-save-notice-action').addEventListener('click', () => {
+        hideGuestSaveNotice();
+        accountOpen?.click();
+      });
+    }
+    clearTimeout(guestSaveTimer);
+    requestAnimationFrame(() => guestSaveNotice.classList.add('show'));
+    guestSaveTimer = setTimeout(hideGuestSaveNotice, 7000);
+  }
+  window.addEventListener('ctp:guest-favorite-saved', showGuestSaveNotice);
+
   function syncControls() {
     clear.hidden = !search.value;
     for (const button of quickFilters) {
