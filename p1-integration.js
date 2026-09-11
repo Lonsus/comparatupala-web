@@ -57,6 +57,21 @@
     updateActiveSection();
   });
 
+  // The hero CTA must reveal the actual offer content before its own
+  // scroll handler runs. Open both the outer progressive-disclosure panel
+  // and the nested overflow so "Comparar ofertas" really shows every offer.
+  document.addEventListener('click', event => {
+    const button = event.target.closest('#product-view .buy-box-compare-offers');
+    if (!button) return;
+    const offersPanel = document.getElementById('offers-panel');
+    if (!offersPanel) return;
+    if (offersPanel instanceof HTMLDetailsElement) offersPanel.open = true;
+    const overflow = offersPanel.querySelector('.offers-overflow');
+    if (overflow instanceof HTMLDetailsElement) overflow.open = true;
+    preferredSection = 'offers-panel';
+    requestAnimationFrame(updateActiveSection);
+  }, true);
+
   window.addEventListener('scroll', updateActiveSection, {passive: true});
   window.addEventListener('resize', updateActiveSection, {passive: true});
   document.addEventListener('toggle', event => {
