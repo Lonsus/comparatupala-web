@@ -184,6 +184,28 @@
     document.body.appendChild(script);
   }
 
+  function loadProductPriceTrend() {
+    if (!document.querySelector('link[data-product-price-trend]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'product-price-trend.css?v=1';
+      link.dataset.productPriceTrend = 'true';
+      document.head.appendChild(link);
+    }
+
+    const existing = document.querySelector('script[data-product-price-trend]');
+    if (existing) {
+      window.CTPProductPriceTrend?.refresh?.();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'product-price-trend.js?v=1';
+    script.async = false;
+    script.dataset.productPriceTrend = 'true';
+    script.addEventListener('load', () => window.CTPProductPriceTrend?.refresh?.());
+    document.body.appendChild(script);
+  }
+
   function loadCatalogCardPolish(onReady) {
     if (document.querySelector('script[data-catalog-card-polish]')) {
       onReady?.();
@@ -216,6 +238,7 @@
       else renderCatalog();
     }
     loadProductGallery();
+    loadProductPriceTrend();
     loadComparisonBulkActions();
     loadHistoryStoreActions();
     loadStoreCollapsibleSections();
