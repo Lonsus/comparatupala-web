@@ -81,6 +81,106 @@
   }
   window.addEventListener('ctp:guest-favorite-saved', showGuestSaveNotice);
 
+  // Home savings ticker. It is derived from the current published catalog,
+  // comparing only simultaneously available offers in the same currency.
+  const landingView = document.getElementById('landing-view');
+  const landingHero = landingView?.querySelector('.landing-hero');
+  const landingHighlights = document.getElementById('landing-highlights');
+  let savingsTicker = null;
+  let savingsSignature = '';
+
+  function escapeTickerText(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+    }[char]));
+  }
+
+  function formatTickerMoney(value, currency) {
+    try {
+      return new Intl.NumberFormat('es-ES', {
+        style: 'currency', currency: currency || 'EUR', maximumFractionDigits: 0
+      }).format(value);
+    } catch {
+      return `${Math.round(value)} €`;
+    }
+  }
+
+  function savingsForProduct(product) {
+    const byCurrency = new Map();
+    for (const offer of product?.offers || []) {
+      if (!available(offer) || !validPrice(offer.price)) continue;
+      const currency = offer.currency || 'EUR';
+      if (!byCurrency.has(currency)) byCurrency.set(currency, []);
+      byCurrency.get(currency).push(Number(offer.price));
+    }
+
+    let best = null;
+    for (const [currency, prices] of byCurrency) {
+      if (prices.length < 2) continue;
+      const low = Math.min(...prices);
+      const high = Math.max(...prices);
+      const saving = high - low;
+      if (saving <= 0) continue;
+      if (!best || saving > best.saving) best = { saving, low, high, currency };
+    }
+    return best;
+  }
+
+  function renderSavingsTicker() {
+    if (!landingHero || !state?.loaded || !Array.isArray(state.products)) return;
+
+    const entries = state.products
+      .map(product => ({ product, data: savingsForProduct(product) }))
+      .filter(entry => entry.data)
+      .sort((a, b) => b.data.saving - a.data.saving)
+      .slice(0, 12);
+
+    if (entries.length < 2) {
+      savingsTicker?.remove();
+      savingsTicker = null;
+      savingsSignature = '';
+      return;
+    }
+
+    const signature = entries.map(({product, data}) => `${product.id}:${data.saving.toFixed(2)}`).join('|');
+    if (signature === savingsSignature && savingsTicker?.isConnected) return;
+    savingsSignature = signature;
+
+    if (!savingsTicker) {
+      savingsTicker = document.createElement('section');
+      savingsTicker.className = 'savings-ticker';
+      savingsTicker.setAttribute('aria-label', 'Ahorros destacados del catálogo');
+      landingHero.insertAdjacentElement('afterend', savingsTicker);
+    }
+
+    const itemMarkup = entries.map(({product, data}) => {
+      const saving = formatTickerMoney(data.saving, data.currency);
+      const low = formatTickerMoney(data.low, data.currency);
+      return `<a class="savings-ticker-item" href="#pala/${encodeURIComponent(product.id)}">
+        <span class="savings-ticker-name">${escapeTickerText(product.name)}</span>
+        <strong class="savings-ticker-saving">Ahorra ${escapeTickerText(saving)}</strong>
+        <small>desde ${escapeTickerText(low)}</small>
+      </a>`;
+    }).join('');
+
+    savingsTicker.innerHTML = `
+      <div class="savings-ticker-label">
+        <span class="savings-ticker-pulse" aria-hidden="true"></span>
+        <span><strong>Ahorros de hoy</strong><small>Comparando precios disponibles ahora</small></span>
+      </div>
+      <div class="savings-ticker-viewport" tabindex="0" aria-label="Ahorros destacados. Pasa el cursor o enfoca para pausar.">
+        <div class="savings-ticker-track">
+          <div class="savings-ticker-group">${itemMarkup}</div>
+          <div class="savings-ticker-group" aria-hidden="true">${itemMarkup}</div>
+        </div>
+      </div>`;
+  }
+
+  if (landingHighlights) {
+    new MutationObserver(renderSavingsTicker).observe(landingHighlights, {childList: true, subtree: true});
+  }
+  renderSavingsTicker();
+
   function syncControls() {
     clear.hidden = !search.value;
     for (const button of quickFilters) {
