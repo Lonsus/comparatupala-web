@@ -133,7 +133,7 @@
       .map(product => ({ product, data: savingsForProduct(product) }))
       .filter(entry => entry.data)
       .sort((a, b) => b.data.saving - a.data.saving)
-      .slice(0, 12);
+      .slice(0, 24);
 
     if (entries.length < 2) {
       savingsTicker?.remove();
@@ -174,6 +174,11 @@
           <div class="savings-ticker-group" aria-hidden="true">${itemMarkup}</div>
         </div>
       </div>`;
+
+    // Keep the visual travel speed stable when the strip contains more items.
+    // Roughly 2.85 s per unique saving matches the previous 12-item cadence.
+    const track = savingsTicker.querySelector('.savings-ticker-track');
+    if (track) track.style.animationDuration = `${Math.max(34, Math.round(entries.length * 2.85))}s`;
   }
 
   if (landingHighlights) {
