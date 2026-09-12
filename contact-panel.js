@@ -1,8 +1,9 @@
 (() => {
   'use strict';
 
-  // Activar solo cuando exista un canal privado real y la información de privacidad esté completa.
-  const CONTACT_EMAIL = '';
+  const CONTACT_FUNCTION = 'contact-form';
+  const CONTACT_COOLDOWN_MS = 30 * 1000;
+  const CONTACT_COOLDOWN_KEY = 'comparatupala:contact-last-send';
   // Activar solo cuando exista un proveedor/endpoint de newsletter configurado y revisado.
   const NEWSLETTER_ENDPOINT = '';
 
@@ -171,8 +172,7 @@
     });
 
     panes.forEach((pane) => {
-      const isActive = pane.dataset.contactPane === name;
-      pane.hidden = !isActive;
+      pane.hidden = pane.dataset.contactPane !== name;
     });
   };
 
@@ -185,24 +185,11 @@
     closeButton?.focus({preventScroll:true});
   };
 
-  const closeDialog = () => {
-    dialog.close();
-  };
+  const closeDialog = () => dialog.close();
 
   dialog.addEventListener('close', () => {
     document.body.classList.remove('contact-open');
     returnFocus?.focus({preventScroll:true});
-  });
-
-  // Do not ask visitors to complete forms before their channels are available.
-  [[contactForm, CONTACT_EMAIL, contactStatus, 'El contacto privado aún no está disponible. Para corregir datos, puedes abrir una incidencia en GitHub.'],
-    [newsletterForm, NEWSLETTER_ENDPOINT, newsletterStatus, 'Las novedades por email aún no están disponibles.']].forEach(([form, configured, status, message]) => {
-    if (!form || configured) return;
-    form.classList.add('is-unavailable');
-    form.querySelectorAll('input, select, textarea, button').forEach(control => control.disabled = true);
-    setStatus(status, message);
-    form.prepend(status);
-    form.setAttribute('aria-describedby', status.id);
   });
 
   openButtons.forEach((button) => {
@@ -228,40 +215,112 @@
     });
   });
 
-  contactForm?.addEventListener('submit', (event) => {
-    event.preventDefault();
+  function prepareContactForm() {
+    if (!contactForm) return;
+    contactForm.classList.remove('is-unavailable');
+    contactForm.querySelectorAll('input, select, textarea, button').forEach(control => { control.disabled = false; });
 
-    if (!CONTACT_EMAIL) {
-      setStatus(
-        contactStatus,
-        'El contacto privado todavía no está activado. Este formulario no ha transmitido ningún dato. Puedes usar mientras tanto el canal público de GitHub.',
-        'error'
-      );
+    const message = contactForm.elements.namedItem('message');
+    if (message) message.setAttribute('minlength', '10');
+
+    const submit = contactForm.querySelector('button[type="submit"]');
+    if (submit) submit.textContent = 'Enviar mensaje';
+
+    const intro = document.querySelector('#contact-pane-contact .contact-intro');
+    if (intro) intro.textContent = 'Escríbenos directamente desde ComparaTuPala. Utilizaremos tus datos únicamente para gestionar y responder a tu consulta.';
+
+    const legal = document.querySelector('#contact-pane-contact .contact-legal-note');
+    if (legal) legal.innerHTML = '<strong>Uso de tus datos.</strong> El mensaje se procesa a través de Supabase y del proveedor transaccional configurado únicamente para gestionar tu consulta. No se añade tu email a la newsletter ni a listas de marketing.';
+
+    if (!contactForm.elements.namedItem('website')) {
+      const honeypot = document.createElement('label');
+      honeypot.setAttribute('aria-hidden', 'true');
+      honeypot.style.cssText = 'position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;';
+      honeypot.innerHTML = 'Sitio web<input name="website" type="text" tabindex="-1" autocomplete="off">';
+      contactForm.appendChild(honeypot);
+    }
+  }
+
+  function lastContactSend() {
+    try { return Number(sessionStorage.getItem(CONTACT_COOLDOWN_KEY) || 0); }
+    catch { return 0; }
+  }
+
+  function recordContactSend() {
+    try { sessionStorage.setItem(CONTACT_COOLDOWN_KEY, String(Date.now())); }
+    catch {}
+  }
+
+  prepareContactForm();
+
+  contactForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!contactForm.reportValidity()) return;
+
+    const elapsed = Date.now() - lastContactSend();
+    if (elapsed < CONTACT_COOLDOWN_MS) {
+      const seconds = Math.ceil((CONTACT_COOLDOWN_MS - elapsed) / 1000);
+      setStatus(contactStatus, `Mensaje enviado recientemente. Espera ${seconds} s antes de volver a enviar.`, 'error');
       return;
     }
 
-    const data = new FormData(contactForm);
-    const subject = `[ComparaTuPala] ${String(data.get('subject') || 'Consulta')}`;
-    const body = [
-      `Nombre: ${String(data.get('name') || 'No indicado')}`,
-      `Email de respuesta: ${String(data.get('email') || '')}`,
-      '',
-      String(data.get('message') || '')
-    ].join('\n');
+    const formData = new FormData(contactForm);
+    const payload = {
+      name: String(formData.get('name') || '').trim(),
+      email: String(formData.get('email') || '').trim(),
+      subject: String(formData.get('subject') || '').trim(),
+      message: String(formData.get('message') || '').trim(),
+      website: String(formData.get('website') || '').trim()
+    };
 
-    window.location.href = `mailto:${encodeURIComponent(CONTACT_EMAIL)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    setStatus(contactStatus, 'Se ha preparado el mensaje en tu aplicación de correo. Ningún dato se almacena en ComparaTuPala.', 'ok');
+    if (payload.message.length < 10) {
+      setStatus(contactStatus, 'El mensaje debe tener al menos 10 caracteres.', 'error');
+      return;
+    }
+
+    const submit = contactForm.querySelector('button[type="submit"]');
+    const previousLabel = submit?.textContent || 'Enviar mensaje';
+    if (submit) {
+      submit.disabled = true;
+      submit.textContent = 'Enviando…';
+    }
+    setStatus(contactStatus, 'Enviando mensaje…');
+
+    try {
+      const client = await window.comparatupalaSupabaseReady;
+      if (!client) throw new Error('Supabase client unavailable');
+
+      const {data, error} = await client.functions.invoke(CONTACT_FUNCTION, {body: payload});
+      if (error || data?.ok !== true) throw error || new Error('Contact function failed');
+
+      recordContactSend();
+      contactForm.reset();
+      setStatus(contactStatus, 'Mensaje enviado correctamente. Gracias por contactar con ComparaTuPala.', 'ok');
+    } catch (error) {
+      console.error('Contact form error:', error);
+      setStatus(contactStatus, 'No hemos podido enviar el mensaje. Inténtalo de nuevo en unos minutos.', 'error');
+    } finally {
+      if (submit) {
+        submit.disabled = false;
+        submit.textContent = previousLabel;
+      }
+    }
   });
+
+  // Newsletter remains disabled until its independent provider/consent flow is configured.
+  if (newsletterForm && !NEWSLETTER_ENDPOINT) {
+    newsletterForm.classList.add('is-unavailable');
+    newsletterForm.querySelectorAll('input, select, textarea, button').forEach(control => { control.disabled = true; });
+    setStatus(newsletterStatus, 'Las novedades por email aún no están disponibles.');
+    if (newsletterStatus && newsletterStatus.parentElement === newsletterForm) newsletterForm.prepend(newsletterStatus);
+    if (newsletterStatus?.id) newsletterForm.setAttribute('aria-describedby', newsletterStatus.id);
+  }
 
   newsletterForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
 
     if (!NEWSLETTER_ENDPOINT) {
-      setStatus(
-        newsletterStatus,
-        'La newsletter todavía no está activada. Tu dirección no se ha enviado ni almacenado.',
-        'error'
-      );
+      setStatus(newsletterStatus, 'La newsletter todavía no está activada. Tu dirección no se ha enviado ni almacenado.', 'error');
       return;
     }
 
@@ -280,7 +339,7 @@
     try {
       const response = await fetch(NEWSLETTER_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(payload)
       });
       if (!response.ok) throw new Error('Newsletter subscription failed');
