@@ -58,7 +58,7 @@ const types = {'.html':'text/html', '.js':'text/javascript', '.css':'text/css', 
       const missing = 'images/products/test-missing-image.jpg';
       const urls = productImageUrls({image_url:missing, image_urls:[missing, valid], offers:[{image_url:valid}, {image_url:'images/products/loader.gif', image_source_url:'https://example.com/reload.gif'}]});
       const host = document.createElement('div'); host.id = 'image-regression';
-      host.innerHTML = productImage({name:'Prueba de alternativa', image_url:missing, image_urls:[valid]}, true);
+      host.innerHTML = productImage({name:'Prueba de alternativa', image_url:missing, image_urls:[missing, valid]}, true);
       document.body.append(host); bindImageFallback(host);
       return {urls, missing, valid};
     });

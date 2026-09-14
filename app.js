@@ -103,13 +103,16 @@ function productImageUrls(product) {
     const url = publishedImageUrl(value);
     if (url && !urls.includes(url)) urls.push(url);
   };
-  const gallery = Array.isArray(product.image_urls) ? product.image_urls : [];
-  const sources = Array.isArray(product.image_source_urls) ? product.image_source_urls : [];
-  add(product.image_url, sources[gallery.indexOf(product.image_url)] || product.image_source_url);
-  gallery.forEach((url, index) => add(url, sources[index]));
+  const addEntity = entity => {
+    const gallery = Array.isArray(entity.image_urls) ? entity.image_urls : [];
+    const sources = Array.isArray(entity.image_source_urls) ? entity.image_source_urls : [];
+    gallery.forEach((url, index) => add(url, sources[index]));
+    add(entity.image_url, sources[gallery.indexOf(entity.image_url)] || entity.image_source_url);
+  };
+  addEntity(product);
   const offers = product.offers || [];
   [...offers.filter(o => o.active !== false), ...offers.filter(o => o.active === false)]
-    .forEach(offer => add(offer.image_url, offer.image_source_url));
+    .forEach(addEntity);
   return urls;
 }
 function productImage(p,detail=false){
