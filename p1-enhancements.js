@@ -68,7 +68,7 @@
       <div class="card-visual">
         ${d ? `<span class="discount-badge">−${d}% sobre PVP</span>` : ''}
         ${saveButton(p)}
-        <a href="${href}" tabindex="-1" aria-hidden="true">${productImage({...p, image_url: source.image_url || p.image_url})}</a>
+        <a href="${href}" tabindex="-1" aria-hidden="true">${productImage(p)}</a>
       </div>
       <div class="card-body">
         <p class="brand">${esc(p.brand || 'Marca sin indicar')}</p>

@@ -268,7 +268,7 @@
     if (!document.querySelector('link[data-progressive-disclosure]')) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'progressive-disclosure.css?v=7';
+      link.href = 'progressive-disclosure.css?v=images-20260914';
       link.dataset.progressiveDisclosure = 'true';
       document.head.appendChild(link);
     }
@@ -278,7 +278,7 @@
       return;
     }
     const script = document.createElement('script');
-    script.src = 'progressive-disclosure.js?v=4';
+    script.src = 'progressive-disclosure.js?v=images-20260914';
     script.async = false;
     script.dataset.progressiveDisclosure = 'true';
     script.addEventListener('load', continueAfterProgressiveDisclosure);

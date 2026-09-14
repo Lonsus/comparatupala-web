@@ -95,10 +95,26 @@ function productMatch(p,f){
   });
   return eligible.length?{product:p,offers:eligible,best:bestOffer(priceEligible)}:null;
 }
+// Keep the selected product cover stable when prices and filters change.
+function productImageUrls(product) {
+  const urls = [];
+  const add = (value, source) => {
+    if (/(?:^|\/)(?:reload|loading|preloader)\.gif(?:[?#]|$)/i.test(String(source || value || ''))) return;
+    const url = publishedImageUrl(value);
+    if (url && !urls.includes(url)) urls.push(url);
+  };
+  const gallery = Array.isArray(product.image_urls) ? product.image_urls : [];
+  const sources = Array.isArray(product.image_source_urls) ? product.image_source_urls : [];
+  add(product.image_url, sources[gallery.indexOf(product.image_url)] || product.image_source_url);
+  gallery.forEach((url, index) => add(url, sources[index]));
+  const offers = product.offers || [];
+  [...offers.filter(o => o.active !== false), ...offers.filter(o => o.active === false)]
+    .forEach(offer => add(offer.image_url, offer.image_source_url));
+  return urls;
+}
 function productImage(p,detail=false){
-  const offers=p.offers||[];
-  const urls=[...new Set([p.image_url,...offers.filter(o=>o.active!==false).map(o=>o.image_url),...offers.filter(o=>o.active===false).map(o=>o.image_url)].map(publishedImageUrl).filter(Boolean))];
-  return `<div class="product-media ${detail?'detail-media':''} ${urls.length?'':'is-missing'}">${urls.length?`<img src="${esc(urls[0])}" data-image-fallbacks="${esc(JSON.stringify(urls.slice(1)))}" alt="${esc(p.name)}" loading="lazy">`:''}<span>Imagen no disponible</span></div>`;
+  const urls=productImageUrls(p);
+  return `<div class="product-media ${detail?'detail-media':''} ${urls.length?'':'is-missing'}">${urls.length?`<img src="${esc(urls[0])}" data-image-fallbacks="${esc(JSON.stringify(urls.slice(1)))}" alt="${esc(p.name)}" loading="${detail?'eager':'lazy'}" decoding="async" referrerpolicy="no-referrer" width="320" height="320">`:''}<span>Imagen no disponible</span></div>`;
 }
 function bindImageFallback(root){
   root.querySelectorAll('.product-media img').forEach(img=>{
@@ -120,7 +136,7 @@ function card(row){
   const {product:p,best,offers}=row, source=offers.find(o=>best&&o.id===best.id)||offers[0], specs=['shape','play','face'].map(k=>feature(source,k)).filter(Boolean), d=discount(best);
   const pvpSource=[best,...offers].find(o=>o&&validPrice(o.original_price)), pvp=pvpSource?.original_price;
   const href='#pala/'+encodeURIComponent(p.id);
-  return `<article class="card"><div class="card-visual">${d?`<span class="discount-badge">−${d}% sobre PVP</span>`:''}${saveButton(p)}<a href="${href}" tabindex="-1" aria-hidden="true">${productImage({...p,image_url:source.image_url||p.image_url})}</a></div><div class="card-body"><p class="brand">${esc(p.brand||'Marca sin indicar')}</p><h3><a href="${href}">${esc(p.name)}</a></h3><div class="feature-tags">${specs.map(v=>`<span>${esc(v)}</span>`).join('')}</div><p class="source-caption">${specs.length?'Ficha: '+esc(storeName(source.store)):'Características pendientes'}</p><div class="card-price"><div><small>${best?'Mejor precio disponible':'Sin oferta disponible'}</small><strong>${money(best?.price,best?.currency)}</strong>${validPrice(pvp)?`<span class="card-pvp">PVP ${money(pvp,pvpSource?.currency||best?.currency)}</span>`:''}</div><span class="store-name">${best?esc(storeName(best.store)):'Consulta las tiendas'}</span></div></div><div class="card-footer"><span class="store-dots">${p.stores.map(dot).join('')}${p.stores.length} tienda${p.stores.length===1?'':'s'}</span><a href="${href}">Comparar →</a></div></article>`;
+  return `<article class="card"><div class="card-visual">${d?`<span class="discount-badge">−${d}% sobre PVP</span>`:''}${saveButton(p)}<a href="${href}" tabindex="-1" aria-hidden="true">${productImage(p)}</a></div><div class="card-body"><p class="brand">${esc(p.brand||'Marca sin indicar')}</p><h3><a href="${href}">${esc(p.name)}</a></h3><div class="feature-tags">${specs.map(v=>`<span>${esc(v)}</span>`).join('')}</div><p class="source-caption">${specs.length?'Ficha: '+esc(storeName(source.store)):'Características pendientes'}</p><div class="card-price"><div><small>${best?'Mejor precio disponible':'Sin oferta disponible'}</small><strong>${money(best?.price,best?.currency)}</strong>${validPrice(pvp)?`<span class="card-pvp">PVP ${money(pvp,pvpSource?.currency||best?.currency)}</span>`:''}</div><span class="store-name">${best?esc(storeName(best.store)):'Consulta las tiendas'}</span></div></div><div class="card-footer"><span class="store-dots">${p.stores.map(dot).join('')}${p.stores.length} tienda${p.stores.length===1?'':'s'}</span><a href="${href}">Comparar →</a></div></article>`;
 }
 // A series ends at the last successful observation, never at the export date or today.
 function offerHistory(offer,history){
