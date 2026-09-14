@@ -384,12 +384,11 @@
     const pvp = offer && validPrice(offer.original_price) && validPrice(offer.price) && Number(offer.original_price) > Number(offer.price)
       ? offer.original_price
       : null;
-    const sourceImage = offer?.image_url || product.image_url;
 
     return `<article class="store-product-card">
       <div class="store-product-media">
         ${d ? `<span class="discount-badge">−${d}% sobre PVP</span>` : ''}
-        <a href="${href}" tabindex="-1" aria-hidden="true">${productImage({...product, image_url: sourceImage})}</a>
+        <a href="${href}" tabindex="-1" aria-hidden="true">${productImage(product)}</a>
       </div>
       <div class="store-product-body">
         <p class="brand">${esc(product.brand || 'Marca sin indicar')}</p>

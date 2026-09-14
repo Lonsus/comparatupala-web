@@ -95,10 +95,29 @@ function productMatch(p,f){
   });
   return eligible.length?{product:p,offers:eligible,best:bestOffer(priceEligible)}:null;
 }
+// Keep the selected product cover stable when prices and filters change.
+function productImageUrls(product) {
+  const urls = [];
+  const add = (value, source) => {
+    if (/(?:^|\/)(?:reload|loading|preloader)\.gif(?:[?#]|$)/i.test(String(source || value || ''))) return;
+    const url = publishedImageUrl(value);
+    if (url && !urls.includes(url)) urls.push(url);
+  };
+  const addEntity = entity => {
+    const gallery = Array.isArray(entity.image_urls) ? entity.image_urls : [];
+    const sources = Array.isArray(entity.image_source_urls) ? entity.image_source_urls : [];
+    gallery.forEach((url, index) => add(url, sources[index]));
+    add(entity.image_url, sources[gallery.indexOf(entity.image_url)] || entity.image_source_url);
+  };
+  addEntity(product);
+  const offers = product.offers || [];
+  [...offers.filter(o => o.active !== false), ...offers.filter(o => o.active === false)]
+    .forEach(addEntity);
+  return urls;
+}
 function productImage(p,detail=false){
-  const offers=p.offers||[];
-  const urls=[...new Set([p.image_url,...offers.filter(o=>o.active!==false).map(o=>o.image_url),...offers.filter(o=>o.active===false).map(o=>o.image_url)].map(publishedImageUrl).filter(Boolean))];
-  return `<div class="product-media ${detail?'detail-media':''} ${urls.length?'':'is-missing'}">${urls.length?`<img src="${esc(urls[0])}" data-image-fallbacks="${esc(JSON.stringify(urls.slice(1)))}" alt="${esc(p.name)}" loading="lazy">`:''}<span>Imagen no disponible</span></div>`;
+  const urls=productImageUrls(p);
+  return `<div class="product-media ${detail?'detail-media':''} ${urls.length?'':'is-missing'}">${urls.length?`<img src="${esc(urls[0])}" data-image-fallbacks="${esc(JSON.stringify(urls.slice(1)))}" alt="${esc(p.name)}" loading="${detail?'eager':'lazy'}" decoding="async" referrerpolicy="no-referrer" width="320" height="320">`:''}<span>Imagen no disponible</span></div>`;
 }
 function bindImageFallback(root){
   root.querySelectorAll('.product-media img').forEach(img=>{
