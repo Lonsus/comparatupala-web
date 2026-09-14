@@ -19,9 +19,12 @@
   }
 
   function galleryUrls(product) {
-    const values = Array.isArray(product?.image_urls) && product.image_urls.length
-      ? product.image_urls
-      : [product?.image_url];
+    const shared = window.CTPProductImageUrls?.(product);
+    const values = Array.isArray(shared) && shared.length
+      ? shared
+      : (Array.isArray(product?.image_urls) && product.image_urls.length
+        ? product.image_urls
+        : [product?.image_url]);
     const seen = new Set();
     return values.map(safeImageUrl).filter(url => url && !seen.has(url) && seen.add(url));
   }
