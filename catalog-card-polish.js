@@ -115,6 +115,33 @@
     });
   }
 
+  function entityImageUrls(entity) {
+    const gallery = Array.isArray(entity?.image_urls) ? entity.image_urls : [];
+    return [...gallery, entity?.image_url];
+  }
+
+  function productImageUrls(product) {
+    const offers = Array.isArray(product?.offers) ? product.offers : [];
+    const activeOffers = offers.filter(offer => offer?.active !== false);
+    const inactiveOffers = offers.filter(offer => offer?.active === false);
+    const candidates = [
+      ...entityImageUrls(product),
+      ...activeOffers.flatMap(entityImageUrls),
+      ...inactiveOffers.flatMap(entityImageUrls)
+    ];
+
+    return [...new Set(candidates.map(publishedImageUrl).filter(Boolean))];
+  }
+
+  // Keep catalog cards, detail hero and the product gallery on the same image
+  // priority: product gallery first, then the legacy single image, then offers.
+  productImage = function productImageGalleryFirst(product, detail = false) {
+    const urls = productImageUrls(product);
+    return `<div class="product-media ${detail ? 'detail-media' : ''} ${urls.length ? '' : 'is-missing'}">${urls.length ? `<img src="${esc(urls[0])}" data-image-fallbacks="${esc(JSON.stringify(urls.slice(1)))}" alt="${esc(product.name)}" loading="lazy">` : ''}<span>Imagen no disponible</span></div>`;
+  };
+
+  window.CTPProductImageUrls = productImageUrls;
+
   ensureStyles();
 
   const baseCard = card;
